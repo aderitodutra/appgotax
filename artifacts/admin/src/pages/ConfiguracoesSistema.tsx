@@ -11,7 +11,7 @@ const TABS: { id: Tab; label: string; icon: typeof FileText }[] = [
   { id: "caronas", label: "Viagens Compartilhadas", icon: Car },
 ];
 
-const PROD_BASE = "https://gotaxiplus.replit.app";
+const PROD_BASE = "https://admin.gotaxi.com.br";
 
 export default function ConfiguracoesSistema() {
   const { token } = useAuth();
