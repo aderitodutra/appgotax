@@ -103,7 +103,7 @@ export function BloqueadoScreen({ token, onDesbloqueado }: Props) {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-5">
-          <img src="/pdv/logo.png" alt="Go Taxi" className="h-9 object-contain mx-auto" />
+          <img src="/logo.png" alt="Go Taxi" className="h-9 object-contain mx-auto" />
         </div>
 
         {/* Block card */}
