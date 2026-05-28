@@ -20,6 +20,7 @@ WORKSPACE=afiliados-hub
 GOOGLE_MAPS_KEY=AIzaSy...
 BASE_PATH=/afiliados/
 PORT=3000
+PUBLIC_DOMAIN=gotaxi.com.br
 ```
 
 > ⚠️ **`BASE_PATH=/afiliados/` é obrigatório.** O SPA é servido via proxy em
