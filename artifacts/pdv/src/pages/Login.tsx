@@ -32,7 +32,7 @@ export default function Login() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/pdv/logo.png" alt="Go Taxi" className="h-14 object-contain mx-auto" />
+          <img src="/logo.png" alt="Go Taxi" className="h-14 object-contain mx-auto" />
           <p className="text-muted-foreground mt-2 text-sm">Painel do Parceiro — acesso exclusivo</p>
         </div>
 

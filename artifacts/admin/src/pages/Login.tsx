@@ -23,7 +23,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/admin/logo.png" alt="Go Taxi" className="h-14 object-contain mx-auto" />
+          <img src="/logo.png" alt="Go Taxi" className="h-14 object-contain mx-auto" />
           <p className="text-muted-foreground text-sm mt-2">Painel de controle da plataforma</p>
         </div>
 
