@@ -1966,7 +1966,7 @@ router.get("/perfil", async (req, res) => {
     const empresaId = getEmpresaId(req);
     if (!empresaId) return res.status(401).json({ error: "unauthorized" });
     const [emp, rest] = await Promise.all([
-      db.execute(`SELECT nome, telefone, cnpj, logo FROM empresas WHERE id = ${empresaId} LIMIT 1`),
+      db.execute(`SELECT nome, telefone, cnpj FROM empresas WHERE id = ${empresaId} LIMIT 1`),
       db.execute(`SELECT nome, categoria, descricao FROM restaurantes WHERE empresa_id = ${empresaId} LIMIT 1`),
     ]);
     const e = (emp.rows[0] as any) ?? {};
@@ -1977,7 +1977,6 @@ router.get("/perfil", async (req, res) => {
       descricao: r.descricao ?? "",
       telefone: e.telefone ?? "",
       cnpj: e.cnpj ?? "",
-      logo: e.logo ?? "",
     });
   } catch (err) { console.error(err); return res.status(500).json({ error: "server_error" }); }
 });
@@ -1987,11 +1986,10 @@ router.put("/perfil", async (req, res) => {
   try {
     const empresaId = getEmpresaId(req);
     if (!empresaId) return res.status(401).json({ error: "unauthorized" });
-    const { nome, categoria, descricao, telefone, cnpj, logo } = req.body;
+    const { nome, categoria, descricao, telefone, cnpj } = req.body;
     const safe = (v: unknown) => String(v ?? "").replace(/'/g, "''");
 
-    const logoSet = logo !== undefined ? `, logo = ${logo ? `'${safe(logo)}'` : "NULL"}` : "";
-    await db.execute(`UPDATE empresas SET nome = '${safe(nome)}', telefone = '${safe(telefone)}', cnpj = '${safe(cnpj)}'${logoSet} WHERE id = ${empresaId}`);
+    await db.execute(`UPDATE empresas SET nome = '${safe(nome)}', telefone = '${safe(telefone)}', cnpj = '${safe(cnpj)}' WHERE id = ${empresaId}`);
 
     const existing = await db.execute(`SELECT id FROM restaurantes WHERE empresa_id = ${empresaId} LIMIT 1`);
     if ((existing.rows as any[]).length > 0) {
@@ -2000,31 +1998,7 @@ router.put("/perfil", async (req, res) => {
       await db.execute(`INSERT INTO restaurantes (empresa_id, nome, categoria, descricao, aberto) VALUES (${empresaId}, '${safe(nome)}', '${safe(categoria)}', '${safe(descricao)}', true)`);
     }
 
-    return res.json({ ok: true, nome: safe(nome), categoria: safe(categoria), descricao: safe(descricao), telefone: safe(telefone), cnpj: safe(cnpj), logo: logo ?? "" });
-  } catch (err) { console.error(err); return res.status(500).json({ error: "server_error" }); }
-});
-
-// ── POST /api/pdv/perfil/imagem ──────────────────────────────────────────────
-// Upload da foto/logo da empresa (exibida nos cards do app mobile)
-router.post("/perfil/imagem", productImageUpload.single("imagem"), async (req, res) => {
-  try {
-    const empresaId = getEmpresaId(req);
-    if (!empresaId) return res.status(401).json({ error: "unauthorized" });
-    const file = (req as any).file;
-    if (!file) return res.status(400).json({ error: "no_file", message: "Nenhum ficheiro enviado" });
-    const imageUrl = await uploadImageToGCS(file.buffer, file.originalname, "empresas");
-    await db.execute(`UPDATE empresas SET logo = '${imageUrl}' WHERE id = ${empresaId}`);
-    return res.json({ logo: imageUrl });
-  } catch (err) { console.error(err); return res.status(500).json({ error: "server_error" }); }
-});
-
-// ── DELETE /api/pdv/perfil/imagem ────────────────────────────────────────────
-router.delete("/perfil/imagem", async (req, res) => {
-  try {
-    const empresaId = getEmpresaId(req);
-    if (!empresaId) return res.status(401).json({ error: "unauthorized" });
-    await db.execute(`UPDATE empresas SET logo = NULL WHERE id = ${empresaId}`);
-    return res.json({ ok: true });
+    return res.json({ ok: true, nome: safe(nome), categoria: safe(categoria), descricao: safe(descricao), telefone: safe(telefone), cnpj: safe(cnpj) });
   } catch (err) { console.error(err); return res.status(500).json({ error: "server_error" }); }
 });
 
