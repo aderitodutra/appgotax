@@ -1240,7 +1240,7 @@ router.post("/calcular-frete", async (req, res) => {
 router.get("/maps-key", (req, res) => {
   const empresaId = getEmpresaId(req);
   if (!empresaId) return res.status(401).json({ error: "unauthorized" });
-  return res.json({ key: process.env.GOOGLE_MAPS_KEY || "" });
+  return res.json({ key: process.env.GOOGLE_MAPS_WEB_KEY || process.env.GOOGLE_MAPS_KEY || "" });
 });
 
 // ── Timeline: Config do restaurante (lat/lng) ─────────────────────────────
