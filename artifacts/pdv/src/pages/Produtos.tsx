@@ -1001,9 +1001,27 @@ function ProdutoDialog({
       setImageBlob(null);
       // ── Load grupos já vinculados ao produto (para edição) ──────────────
       if (produto?.id) {
-        api.get(`produtos/${produto.id}/grupos`).then((ids: number[]) => {
-          if (Array.isArray(ids)) setSelectedGrupos(new Set(ids));
-        }).catch(() => {});
+api.get(`produtos/${produto.id}/grupos`).then((data: any) => {
+  if (Array.isArray(data)) {
+    if (data.length > 0 && typeof data[0] === "object") {
+      setSelectedGrupos(new Set(data.map((d: any) => d.grupo_id ?? d.id)));
+      const ovs: Record<number, { min: string; max: string; obrig: boolean }> = {};
+      for (const d of data) {
+        const gid = d.grupo_id ?? d.id;
+        if (d.min_selecoes != null || d.max_selecoes != null || d.obrigatorio != null) {
+          ovs[gid] = {
+            min: String(d.min_selecoes ?? 0),
+            max: String(d.max_selecoes ?? 1),
+            obrig: !!d.obrigatorio,
+          };
+        }
+      }
+      if (Object.keys(ovs).length > 0) setGrupoOverrides(ovs);
+    } else {
+      setSelectedGrupos(new Set(data));
+    }
+  }
+}).catch(() => {});
       }
     }
   }, [open, produto]);
@@ -1060,17 +1078,24 @@ function ProdutoDialog({
       const r = await api.post("produtos", body);
       produtoId = r?.id;
     }
-    if (produtoId) {
-      await api.put(`produtos/${produtoId}/grupos`, { grupoIds: Array.from(selectedGrupos) });
-      // Aplicar overrides de min/max/obrig nos grupos que foram editados inline
-      for (const [gidStr, ov] of Object.entries(grupoOverrides)) {
-        await api.patch(`grupos/${gidStr}`, {
-          min_selecoes: parseInt(ov.min) || 0,
-          max_selecoes: parseInt(ov.max) || 1,
-          obrigatorio: ov.obrig,
-        });
-      }
+if (produtoId) {
+  // Montar overrides por produto (salva em produto_grupos_extras_pdv, não no grupo global)
+  const overrides: Record<number, { min_selecoes: number; max_selecoes: number; obrigatorio: boolean }> = {};
+  for (const [gidStr, ov] of Object.entries(grupoOverrides)) {
+    const gid = Number(gidStr);
+    if (selectedGrupos.has(gid)) {
+      overrides[gid] = {
+        min_selecoes: parseInt(ov.min) || 0,
+        max_selecoes: parseInt(ov.max) || 1,
+        obrigatorio: ov.obrig,
+      };
     }
+  }
+  await api.put(`produtos/${produtoId}/grupos`, {
+    grupoIds: Array.from(selectedGrupos),
+    overrides,
+  });
+}
     if (imageBlob && produtoId) {
       await api.uploadImage(produtoId, imageBlob, "webp");
     }
