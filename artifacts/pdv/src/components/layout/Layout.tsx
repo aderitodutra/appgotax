@@ -8,7 +8,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className="flex-1 pl-[220px] flex flex-col min-w-0">
         <Topbar />
-        <main className="flex-1 pt-3 px-4 pb-4 overflow-x-hidden">
+        <main className="flex-1 pt-6 px-6 lg:px-8 pb-12 overflow-x-hidden">
           {children}
         </main>
       </div>
