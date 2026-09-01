@@ -424,13 +424,13 @@ async function runStartupMigrations() {
   console.log("Startup migrations done");
 }
 
-runStartupMigrations().then(() => {
-  app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-  });
-}).catch((err) => {
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server listening on port ${port}`);
+});
+
+// Do not block the HTTP listener on database DDL. In production, an ALTER
+// statement can briefly wait on a database lock; the platform must still be
+// able to reach /api/healthz while migrations finish in the background.
+void runStartupMigrations().catch((err) => {
   console.error("Startup migration failed:", err);
-  app.listen(port, () => {
-    console.log(`Server listening on port ${port} (migrations skipped)`);
-  });
 });
