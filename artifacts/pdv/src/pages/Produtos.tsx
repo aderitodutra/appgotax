@@ -1001,27 +1001,23 @@ function ProdutoDialog({
       setImageBlob(null);
       // ── Load grupos já vinculados ao produto (para edição) ──────────────
       if (produto?.id) {
-api.get(`produtos/${produto.id}/grupos`).then((data: any) => {
-  if (Array.isArray(data)) {
-    if (data.length > 0 && typeof data[0] === "object") {
-      setSelectedGrupos(new Set(data.map((d: any) => d.grupo_id ?? d.id)));
-      const ovs: Record<number, { min: string; max: string; obrig: boolean }> = {};
-      for (const d of data) {
-        const gid = d.grupo_id ?? d.id;
-        if (d.min_selecoes != null || d.max_selecoes != null || d.obrigatorio != null) {
-          ovs[gid] = {
-            min: String(d.min_selecoes ?? 0),
-            max: String(d.max_selecoes ?? 1),
-            obrig: !!d.obrigatorio,
-          };
-        }
-      }
-      if (Object.keys(ovs).length > 0) setGrupoOverrides(ovs);
-    } else {
-      setSelectedGrupos(new Set(data));
-    }
-  }
-}).catch(() => {});
+        api.get(`produtos/${produto.id}/grupos`).then((rows: { id: number; min_selecoes: number | null; max_selecoes: number | null; obrigatorio: boolean | null }[]) => {
+          if (Array.isArray(rows)) {
+            const ids = new Set(rows.map(r => r.id));
+            const ovs: Record<number, { min: string; max: string; obrig: boolean }> = {};
+            for (const r of rows) {
+              if (r.min_selecoes !== null || r.max_selecoes !== null || r.obrigatorio !== null) {
+                ovs[r.id] = {
+                  min: String(r.min_selecoes ?? ""),
+                  max: String(r.max_selecoes ?? ""),
+                  obrig: r.obrigatorio ?? false,
+                };
+              }
+            }
+            setSelectedGrupos(ids);
+            setGrupoOverrides(ovs);
+          }
+        }).catch(() => {});
       }
     }
   }, [open, produto]);
@@ -1078,24 +1074,21 @@ api.get(`produtos/${produto.id}/grupos`).then((data: any) => {
       const r = await api.post("produtos", body);
       produtoId = r?.id;
     }
-if (produtoId) {
-  // Montar overrides por produto (salva em produto_grupos_extras_pdv, não no grupo global)
-  const overrides: Record<number, { min_selecoes: number; max_selecoes: number; obrigatorio: boolean }> = {};
-  for (const [gidStr, ov] of Object.entries(grupoOverrides)) {
-    const gid = Number(gidStr);
-    if (selectedGrupos.has(gid)) {
-      overrides[gid] = {
-        min_selecoes: parseInt(ov.min) || 0,
-        max_selecoes: parseInt(ov.max) || 1,
-        obrigatorio: ov.obrig,
-      };
+    if (produtoId) {
+      // Vincular grupos com overrides por produto (min/max/obrig ficam individuais)
+      const overrides: Record<string, { min_selecoes: number; max_selecoes: number; obrigatorio: boolean }> = {};
+      for (const [gidStr, ov] of Object.entries(grupoOverrides)) {
+        overrides[gidStr] = {
+          min_selecoes: parseInt(ov.min) || 0,
+          max_selecoes: parseInt(ov.max) || 1,
+          obrigatorio: ov.obrig,
+        };
+      }
+      await api.put(`produtos/${produtoId}/grupos`, {
+        grupoIds: Array.from(selectedGrupos),
+        overrides,
+      });
     }
-  }
-  await api.put(`produtos/${produtoId}/grupos`, {
-    grupoIds: Array.from(selectedGrupos),
-    overrides,
-  });
-}
     if (imageBlob && produtoId) {
       await api.uploadImage(produtoId, imageBlob, "webp");
     }
@@ -1302,7 +1295,18 @@ if (produtoId) {
                   const curMax = ov ? ov.max : String(g.max_selecoes);
                   const curObrig = ov ? ov.obrig : g.obrigatorio;
                   const setOv = (patch: Partial<{ min: string; max: string; obrig: boolean }>) =>
-                    setGrupoOverrides(prev => ({ ...prev, [g.id]: { min: curMin, max: curMax, obrig: curObrig, ...patch } }));
+                    setGrupoOverrides(prev => {
+                      const existing = prev[g.id];
+                      return {
+                        ...prev,
+                        [g.id]: {
+                          min: existing?.min ?? String(g.min_selecoes),
+                          max: existing?.max ?? String(g.max_selecoes),
+                          obrig: existing?.obrig ?? g.obrigatorio,
+                          ...patch,
+                        },
+                      };
+                    });
                   return (
                     <div key={g.id}>
                       {/* Row principal — clica para selecionar/desselecionar */}
