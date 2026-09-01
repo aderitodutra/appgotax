@@ -68,10 +68,6 @@ export default function Configuracoes() {
   const [pixTipo, setPixTipo] = useState("aleatoria");
   const [dadosRecebimento, setDadosRecebimento] = useState({
     numero_conta_mercado_pago: "",
-    banco_nome: "",
-    banco_agencia: "",
-    banco_conta: "",
-    banco_tipo_conta: "corrente",
   });
   const [savingPix, setSavingPix] = useState(false);
   const [savedPix, setSavedPix] = useState(false);
@@ -160,10 +156,6 @@ export default function Configuracoes() {
         setPixTipo(pix.tipo_chave_pix ?? "aleatoria");
         setDadosRecebimento({
           numero_conta_mercado_pago: pix.numero_conta_mercado_pago ?? "",
-          banco_nome: pix.banco_nome ?? "",
-          banco_agencia: pix.banco_agencia ?? "",
-          banco_conta: pix.banco_conta ?? "",
-          banco_tipo_conta: pix.banco_tipo_conta ?? "corrente",
         });
       }
       if (perfilData) setPerfil({ nome: perfilData.nome ?? "", categoria: perfilData.categoria ?? "", descricao: perfilData.descricao ?? "", telefone: perfilData.telefone ?? "", cnpj: perfilData.cnpj ?? "" });
@@ -311,7 +303,7 @@ export default function Configuracoes() {
         setTimeout(() => setSavedMp(false), 3000);
       } else {
         const err = await r.json().catch(() => ({}));
-        setMpError(err.message || err.error || "Erro ao salvar credenciais.");
+        setMpError(err.message || err.error || "Erro ao salvar opções de pagamento.");
       }
     } catch {
       setMpError("Falha de conexão. Tente novamente.");
@@ -880,62 +872,26 @@ export default function Configuracoes() {
               </p>
             </div>
 
-            <div className="border-t border-border pt-5 space-y-4">
+              <div className="border-t border-border pt-5 space-y-4">
               <div>
-                <p className="text-sm font-semibold text-foreground">Dados para recebimento e repasse</p>
+                 <p className="text-sm font-semibold text-foreground">Conta Mercado Pago para receber repasses</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Informe os dados da sua conta para que a GoTaxi saiba para onde direcionar os recebimentos e repasses.
+                   Para receber repasses relacionados aos pagamentos via Mercado Pago, você precisa criar uma conta Mercado Pago.
+                   O Mercado Pago não transfere esse valor automaticamente para outro banco.
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Número da conta Mercado Pago</label>
+                 <label className="text-sm font-medium">Número da sua conta Mercado Pago</label>
                 <Input
                   value={dadosRecebimento.numero_conta_mercado_pago}
                   onChange={e => setDadosRecebimento(prev => ({ ...prev, numero_conta_mercado_pago: e.target.value }))}
                   placeholder="Ex: 123456789"
                   className="font-mono"
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Banco</label>
-                  <Input
-                    value={dadosRecebimento.banco_nome}
-                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_nome: e.target.value }))}
-                    placeholder="Nome do banco"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Agência</label>
-                  <Input
-                    value={dadosRecebimento.banco_agencia}
-                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_agencia: e.target.value }))}
-                    placeholder="Ex: 0001"
-                    className="font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Conta bancária</label>
-                  <Input
-                    value={dadosRecebimento.banco_conta}
-                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_conta: e.target.value }))}
-                    placeholder="Ex: 12345-6"
-                    className="font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Tipo de conta</label>
-                  <select
-                    value={dadosRecebimento.banco_tipo_conta}
-                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_tipo_conta: e.target.value }))}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="corrente">Conta corrente</option>
-                    <option value="poupanca">Conta poupança</option>
-                  </select>
-                </div>
+                 <p className="text-xs text-muted-foreground">
+                   Informe o número da conta Mercado Pago criada em seu nome ou em nome da sua empresa.
+                 </p>
               </div>
             </div>
 
@@ -966,7 +922,7 @@ export default function Configuracoes() {
             <Wallet className="w-5 h-5 text-[#009EE3]" /> Integração Mercado Pago
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Receba pagamentos automaticamente de clientes no aplicativo usando sua própria conta Mercado Pago.
+            A GoTaxi processa os pagamentos pela conta global. Para receber repasses, mantenha uma conta Mercado Pago própria.
           </p>
         </div>
         <Card className="md:col-span-2 shadow-sm border-border/50 mt-0 md:mt-6 overflow-hidden">
@@ -987,19 +943,19 @@ export default function Configuracoes() {
                 )}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                As credenciais são administradas com segurança pelo Super Admin.
+                As credenciais são globais, pertencem à GoTaxi e não são acessíveis aos parceiros.
               </p>
             </div>
           </div>
           <CardContent className="p-6 space-y-5">
             <div className={`rounded-xl border p-4 ${mpConfig.configured ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
               <p className={`text-sm font-semibold ${mpConfig.configured ? "text-green-700" : "text-amber-700"}`}>
-                {mpConfig.configured ? "Mercado Pago configurado pelo Super Admin" : "Mercado Pago aguardando configuração"}
+                {mpConfig.configured ? "Integração global da GoTaxi ativa" : "Integração global aguardando configuração"}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {mpConfig.configured
-                  ? "Você pode escolher abaixo quais formas de recebimento deseja aceitar."
-                  : "Solicite ao Super Admin o cadastro das credenciais da sua empresa."}
+                  ? "Você pode escolher abaixo quais formas de pagamento deseja aceitar."
+                  : "A integração global ainda não foi ativada pela GoTaxi."}
               </p>
             </div>
 
@@ -1009,7 +965,7 @@ export default function Configuracoes() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Aceitar Pagamentos via Mercado Pago</p>
-                  <p className="text-xs text-muted-foreground">O cliente pagará pelo app e o valor será creditado na sua conta Mercado Pago.</p>
+                  <p className="text-xs text-muted-foreground">O cliente pagará pelo app. O pagamento será processado pela conta global da GoTaxi.</p>
                 </div>
                 <Switch 
                   checked={mpConfig.mercadoPagoEnabled} 

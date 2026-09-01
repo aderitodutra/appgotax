@@ -44,6 +44,12 @@ export default function ConfiguracoesSistema() {
 
   // Mercado Pago Fees State
   const [mpFees, setMpFees] = useState({ pix: 0, card: 0, wallet: 0 });
+  const [mpCredentials, setMpCredentials] = useState({
+    publicKey: "",
+    accessToken: "",
+    enabled: false,
+    configured: false,
+  });
   const [mpBetaInfo, setMpBetaInfo] = useState({ beta: false, environment: "sandbox" });
   const [savingMp, setSavingMp] = useState(false);
   const [savedMp, setSavedMp] = useState(false);
@@ -57,9 +63,10 @@ export default function ConfiguracoesSistema() {
   useEffect(() => {
     Promise.all([
       fetch(`${API}/configuracoes/admin`, { headers: hdrs }).then(r => r.json()),
-      fetch(`/api/payments/admin/fees`, { headers: hdrs }).then(r => r.ok ? r.json() : null)
+      fetch(`/api/payments/admin/fees`, { headers: hdrs }).then(r => r.ok ? r.json() : null),
+      fetch(`/api/payments/admin/config`, { headers: hdrs }).then(r => r.ok ? r.json() : null),
     ])
-      .then(([d, mp]) => {
+      .then(([d, mp, config]) => {
         if (d && d.sistema) setSistema(prev => ({ ...prev, ...d.sistema }));
         if (d && d.afiliados) setAfiliados(d.afiliados);
         if (mp && mp.feesBasisPoints) {
@@ -69,6 +76,15 @@ export default function ConfiguracoesSistema() {
             wallet: mp.feesBasisPoints.wallet / 100
           });
           setMpBetaInfo({ beta: !!mp.beta, environment: mp.environment || "sandbox" });
+        }
+        if (config) {
+          setMpCredentials({
+            publicKey: config.publicKey || "",
+            accessToken: "",
+            enabled: !!config.enabled,
+            configured: !!config.configured,
+          });
+          setMpBetaInfo({ beta: !!config.beta, environment: config.environment || "sandbox" });
         }
       })
       .catch(() => {})
@@ -99,19 +115,40 @@ export default function ConfiguracoesSistema() {
       if (mpFees.pix < 0 || mpFees.pix > 100 || mpFees.card < 0 || mpFees.card > 100 || mpFees.wallet < 0 || mpFees.wallet > 100) {
         throw new Error("As taxas devem ser entre 0% e 100%.");
       }
-      const r = await fetch(`/api/payments/admin/fees`, {
-        method: "PUT",
-        headers: hdrs,
-        body: JSON.stringify({
-          pix: Math.round(mpFees.pix * 100),
-          card: Math.round(mpFees.card * 100),
-          wallet: Math.round(mpFees.wallet * 100)
+      const configBody: Record<string, string | boolean> = {
+        publicKey: mpCredentials.publicKey.trim(),
+        enabled: mpCredentials.enabled,
+      };
+      if (mpCredentials.accessToken.trim()) configBody.accessToken = mpCredentials.accessToken.trim();
+      const [feesResponse, configResponse] = await Promise.all([
+        fetch(`/api/payments/admin/fees`, {
+          method: "PUT",
+          headers: hdrs,
+          body: JSON.stringify({
+            pix: Math.round(mpFees.pix * 100),
+            card: Math.round(mpFees.card * 100),
+            wallet: Math.round(mpFees.wallet * 100)
+          }),
         }),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
+        fetch(`/api/payments/admin/config`, {
+          method: "PUT",
+          headers: hdrs,
+          body: JSON.stringify(configBody),
+        }),
+      ]);
+      if (!feesResponse.ok || !configResponse.ok) {
+        const failed = !configResponse.ok ? configResponse : feesResponse;
+        const err = await failed.json().catch(() => ({}));
         throw new Error(err.message || err.error || "Erro ao salvar taxas.");
       }
+      const updatedConfig = await configResponse.json();
+      setMpCredentials(prev => ({
+        ...prev,
+        publicKey: updatedConfig.publicKey || "",
+        accessToken: "",
+        enabled: !!updatedConfig.enabled,
+        configured: !!updatedConfig.configured,
+      }));
       setSavedMp(true);
       setTimeout(() => setSavedMp(false), 3000);
     } catch (err: any) {
@@ -396,7 +433,66 @@ export default function ConfiguracoesSistema() {
               <div>
                 <h2 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Wallet className="w-5 h-5 text-[#009EE3]" />
-                  Taxas da Plataforma (Mercado Pago)
+                  Credenciais globais da GoTaxi
+                  {mpCredentials.configured && (
+                    <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                      CONFIGURADO
+                    </span>
+                  )}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Esta é a única conta Mercado Pago usada pela plataforma. Nenhum parceiro terá acesso ou cadastrará credenciais.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Public Key</label>
+                <input
+                  value={mpCredentials.publicKey}
+                  onChange={e => setMpCredentials(prev => ({ ...prev, publicKey: e.target.value }))}
+                  placeholder="APP_USR-..."
+                  autoComplete="off"
+                  className="w-full px-4 py-2.5 border rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">
+                  Access Token
+                  {mpCredentials.configured && <span className="text-xs text-green-600 font-normal ml-1">(salvo e oculto)</span>}
+                </label>
+                <input
+                  type="password"
+                  value={mpCredentials.accessToken}
+                  onChange={e => setMpCredentials(prev => ({ ...prev, accessToken: e.target.value }))}
+                  placeholder={mpCredentials.configured ? "Deixe em branco para manter o token atual" : "APP_USR-..."}
+                  autoComplete="new-password"
+                  className="w-full px-4 py-2.5 border rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <label className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer">
+              <span>
+                <span className="block text-sm font-medium text-gray-900">Ativar Mercado Pago na plataforma</span>
+                <span className="block text-xs text-muted-foreground">Os pagamentos dos clientes serão processados pela conta global da GoTaxi.</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={mpCredentials.enabled}
+                onChange={e => setMpCredentials(prev => ({ ...prev, enabled: e.target.checked }))}
+                className="h-4 w-4 accent-primary"
+              />
+            </label>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-[#009EE3]" />
+                   Taxas e repasses da plataforma
                   {mpBetaInfo.beta && (
                     <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
                       BETA
@@ -409,7 +505,7 @@ export default function ConfiguracoesSistema() {
                   )}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Defina a porcentagem de taxa que a GoTaxi retém em cada transação via Mercado Pago antes de repassar o valor ao parceiro.
+                   Defina a porcentagem que será registrada como taxa da GoTaxi antes do repasse ao parceiro.
                 </p>
               </div>
             </div>
@@ -474,7 +570,7 @@ export default function ConfiguracoesSistema() {
           </div>
           
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700">
-            <strong>Nota:</strong> As taxas são configuradas em porcentagem. Por exemplo, 3.5% reterá R$ 3,50 a cada R$ 100 processados, sendo o restante repassado automaticamente à conta Mercado Pago do parceiro.
+            <strong>Nota:</strong> Os pagamentos entram na conta global da GoTaxi. A taxa é registrada pela plataforma e o valor líquido é repassado usando os dados bancários ou Pix cadastrados pelo parceiro.
           </div>
         </div>
       )}
