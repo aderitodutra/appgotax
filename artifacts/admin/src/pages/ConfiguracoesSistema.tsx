@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
 import { useAuth, API, authHeaders } from "@/lib/auth";
-import { FileText, Shield, Users, Save, ExternalLink, CheckCircle, ChevronDown, ChevronUp, Car } from "lucide-react";
+import { FileText, Shield, Users, Save, ExternalLink, CheckCircle, ChevronDown, ChevronUp, Car, Wallet, AlertCircle, Loader2 } from "lucide-react";
 
-type Tab = "politica" | "termos" | "afiliados" | "caronas";
+type Tab = "politica" | "termos" | "afiliados" | "caronas" | "mercadopago";
 
-const TABS: { id: Tab; label: string; icon: typeof FileText }[] = [
+const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "politica", label: "Política de Privacidade", icon: Shield },
   { id: "termos", label: "Termos de Uso", icon: FileText },
   { id: "afiliados", label: "Regras de Afiliados", icon: Users },
   { id: "caronas", label: "Viagens Compartilhadas", icon: Car },
+  { id: "mercadopago", label: "Mercado Pago (Beta)", icon: Wallet },
 ];
 
-const PROD_BASE = "https://admin.gotaxi.com.br";
+const PROD_BASE = "https://gotaxiplus.replit.app";
 
 export default function ConfiguracoesSistema() {
   const { token } = useAuth();
@@ -35,12 +36,29 @@ export default function ConfiguracoesSistema() {
   const [afiliados, setAfiliados] = useState({ percentual_comissao: 10, valor_minimo_saque: 50 });
   const [showPreview, setShowPreview] = useState(false);
 
+  // Mercado Pago Fees State
+  const [mpFees, setMpFees] = useState({ pix: 0, card: 0, wallet: 0 });
+  const [mpBetaInfo, setMpBetaInfo] = useState({ beta: false, environment: "sandbox" });
+  const [savingMp, setSavingMp] = useState(false);
+  const [savedMp, setSavedMp] = useState(false);
+  const [mpError, setMpError] = useState("");
+
   useEffect(() => {
-    fetch(`${API}/configuracoes/admin`, { headers: hdrs })
-      .then(r => r.json())
-      .then(d => {
-        if (d.sistema) setSistema(prev => ({ ...prev, ...d.sistema }));
-        if (d.afiliados) setAfiliados(d.afiliados);
+    Promise.all([
+      fetch(`${API}/configuracoes/admin`, { headers: hdrs }).then(r => r.json()),
+      fetch(`/api/payments/admin/fees`, { headers: hdrs }).then(r => r.ok ? r.json() : null)
+    ])
+      .then(([d, mp]) => {
+        if (d && d.sistema) setSistema(prev => ({ ...prev, ...d.sistema }));
+        if (d && d.afiliados) setAfiliados(d.afiliados);
+        if (mp && mp.feesBasisPoints) {
+          setMpFees({
+            pix: mp.feesBasisPoints.pix / 100,
+            card: mp.feesBasisPoints.card / 100,
+            wallet: mp.feesBasisPoints.wallet / 100
+          });
+          setMpBetaInfo({ beta: !!mp.beta, environment: mp.environment || "sandbox" });
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -58,6 +76,37 @@ export default function ConfiguracoesSistema() {
       setTimeout(() => setSaved(false), 3000);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSaveMp() {
+    setSavingMp(true);
+    setMpError("");
+    setSavedMp(false);
+    try {
+      // Validate 0-100%
+      if (mpFees.pix < 0 || mpFees.pix > 100 || mpFees.card < 0 || mpFees.card > 100 || mpFees.wallet < 0 || mpFees.wallet > 100) {
+        throw new Error("As taxas devem ser entre 0% e 100%.");
+      }
+      const r = await fetch(`/api/payments/admin/fees`, {
+        method: "PUT",
+        headers: hdrs,
+        body: JSON.stringify({
+          pix: Math.round(mpFees.pix * 100),
+          card: Math.round(mpFees.card * 100),
+          wallet: Math.round(mpFees.wallet * 100)
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.message || err.error || "Erro ao salvar taxas.");
+      }
+      setSavedMp(true);
+      setTimeout(() => setSavedMp(false), 3000);
+    } catch (err: any) {
+      setMpError(err.message || "Erro de conexão.");
+    } finally {
+      setSavingMp(false);
     }
   }
 
@@ -83,14 +132,14 @@ export default function ConfiguracoesSistema() {
           <p className="text-sm text-muted-foreground mt-1">Edite as páginas legais e regras do programa de afiliados</p>
         </div>
         <button
-          onClick={handleSave}
-          disabled={saving}
+          onClick={tab === "mercadopago" ? handleSaveMp : handleSave}
+          disabled={tab === "mercadopago" ? savingMp : saving}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            saved ? "bg-green-500 text-white" : "bg-primary text-primary-foreground hover:opacity-90"
+            (tab === "mercadopago" ? savedMp : saved) ? "bg-green-500 text-white" : "bg-primary text-primary-foreground hover:opacity-90"
           } disabled:opacity-50`}
         >
-          {saved ? <CheckCircle size={16} /> : <Save size={16} />}
-          {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Alterações"}
+          {(tab === "mercadopago" ? savedMp : saved) ? <CheckCircle size={16} /> : <Save size={16} />}
+          {(tab === "mercadopago" ? savingMp : saving) ? "Salvando..." : (tab === "mercadopago" ? savedMp : saved) ? "Salvo!" : "Salvar Alterações"}
         </button>
       </div>
 
@@ -324,6 +373,97 @@ export default function ConfiguracoesSistema() {
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
             <strong>Como funciona:</strong> Ao criar uma viagem compartilhada no app do parceiro, o motorista informa origem e destino. O app calcula a distância automaticamente (Google Maps) e sugere o valor por vaga (km × tarifa). O motorista pode aceitar ou ajustar.
+          </div>
+        </div>
+      )}
+
+      {/* Mercado Pago */}
+      {tab === "mercadopago" && (
+        <div className="space-y-5">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-[#009EE3]" />
+                  Taxas da Plataforma (Mercado Pago)
+                  {mpBetaInfo.beta && (
+                    <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                      BETA
+                    </span>
+                  )}
+                  {mpBetaInfo.environment === "sandbox" && (
+                    <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                      SANDBOX
+                    </span>
+                  )}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Defina a porcentagem de taxa que a GoTaxi retém em cada transação via Mercado Pago antes de repassar o valor ao parceiro.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Taxa Pix (%)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={mpFees.pix === 0 ? "" : mpFees.pix}
+                    onChange={e => setMpFees(f => ({ ...f, pix: Number(e.target.value) }))}
+                    className="w-full pr-8 pl-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="0.00"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Taxa Cartão de Crédito (%)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={mpFees.card === 0 ? "" : mpFees.card}
+                    onChange={e => setMpFees(f => ({ ...f, card: Number(e.target.value) }))}
+                    className="w-full pr-8 pl-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="0.00"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Taxa Carteira MP (%)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={mpFees.wallet === 0 ? "" : mpFees.wallet}
+                    onChange={e => setMpFees(f => ({ ...f, wallet: Number(e.target.value) }))}
+                    className="w-full pr-8 pl-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="0.00"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                </div>
+              </div>
+            </div>
+
+            {mpError && (
+              <div className="mt-5 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                <AlertCircle size={16} />
+                {mpError}
+              </div>
+            )}
+          </div>
+          
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700">
+            <strong>Nota:</strong> As taxas são configuradas em porcentagem. Por exemplo, 3.5% reterá R$ 3,50 a cada R$ 100 processados, sendo o restante repassado automaticamente à conta Mercado Pago do parceiro.
           </div>
         </div>
       )}
