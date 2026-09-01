@@ -1960,16 +1960,12 @@ router.get("/config-pix", async (req, res) => {
   try {
     const empresaId = getEmpresaId(req);
     if (!empresaId) return res.status(401).json({ error: "unauthorized" });
-    const rows = await db.execute(`SELECT chave_pix, tipo_chave_pix, numero_conta_mercado_pago, banco_nome, banco_agencia, banco_conta, banco_tipo_conta FROM empresas WHERE id = ${empresaId} LIMIT 1`);
+    const rows = await db.execute(`SELECT chave_pix, tipo_chave_pix, numero_conta_mercado_pago FROM empresas WHERE id = ${empresaId} LIMIT 1`);
     const emp = rows.rows[0] as any ?? {};
     return res.json({
       chave_pix: emp.chave_pix ?? "",
       tipo_chave_pix: emp.tipo_chave_pix ?? "aleatoria",
       numero_conta_mercado_pago: emp.numero_conta_mercado_pago ?? "",
-      banco_nome: emp.banco_nome ?? "",
-      banco_agencia: emp.banco_agencia ?? "",
-      banco_conta: emp.banco_conta ?? "",
-      banco_tipo_conta: emp.banco_tipo_conta ?? "corrente",
     });
   } catch (err) { console.error(err); return res.status(500).json({ error: "server_error" }); }
 });
@@ -1979,18 +1975,12 @@ router.put("/config-pix", async (req, res) => {
   try {
     const empresaId = getEmpresaId(req);
     if (!empresaId) return res.status(401).json({ error: "unauthorized" });
-    const { chave_pix, tipo_chave_pix, numero_conta_mercado_pago, banco_nome, banco_agencia, banco_conta, banco_tipo_conta } = req.body;
+    const { chave_pix, tipo_chave_pix, numero_conta_mercado_pago } = req.body;
     const ALLOWED_TIPOS = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
-    const ALLOWED_TIPOS_CONTA = ["corrente", "poupanca"];
     const tipo = ALLOWED_TIPOS.includes(tipo_chave_pix) ? tipo_chave_pix : "aleatoria";
-    const tipoConta = ALLOWED_TIPOS_CONTA.includes(banco_tipo_conta) ? banco_tipo_conta : "corrente";
     const safe = (value: unknown) => String(value ?? "").replace(/'/g, "''");
     const sets = [`chave_pix = '${safe(chave_pix)}'`, `tipo_chave_pix = '${tipo}'`];
     if (numero_conta_mercado_pago !== undefined) sets.push(`numero_conta_mercado_pago = '${safe(numero_conta_mercado_pago)}'`);
-    if (banco_nome !== undefined) sets.push(`banco_nome = '${safe(banco_nome)}'`);
-    if (banco_agencia !== undefined) sets.push(`banco_agencia = '${safe(banco_agencia)}'`);
-    if (banco_conta !== undefined) sets.push(`banco_conta = '${safe(banco_conta)}'`);
-    if (banco_tipo_conta !== undefined) sets.push(`banco_tipo_conta = '${tipoConta}'`);
     await db.execute(`
       UPDATE empresas SET ${sets.join(", ")} WHERE id = ${empresaId}
     `);
@@ -1999,10 +1989,6 @@ router.put("/config-pix", async (req, res) => {
       chave_pix: String(chave_pix ?? ""),
       tipo_chave_pix: tipo,
       numero_conta_mercado_pago: String(numero_conta_mercado_pago ?? ""),
-      banco_nome: String(banco_nome ?? ""),
-      banco_agencia: String(banco_agencia ?? ""),
-      banco_conta: String(banco_conta ?? ""),
-      banco_tipo_conta: tipoConta,
     });
   } catch (err) { console.error(err); return res.status(500).json({ error: "server_error" }); }
 });

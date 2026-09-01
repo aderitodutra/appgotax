@@ -10,6 +10,14 @@ export const paymentFeesTable = pgTable("payment_fees", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const mercadoPagoConfigTable = pgTable("mercado_pago_config", {
+  id: integer("id").primaryKey().default(1),
+  publicKey: text("public_key"),
+  encryptedAccessToken: text("encrypted_access_token"),
+  enabled: boolean("enabled").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const empresaMercadoPagoConfigsTable = pgTable("empresa_mercado_pago_configs", {
   id: serial("id").primaryKey(),
   empresaId: integer("empresa_id").notNull().unique(),

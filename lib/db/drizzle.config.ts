@@ -33,6 +33,7 @@ export default defineConfig({
     "restaurantes",
     "subcategorias_alimentacao",
     "payment_fees",
+    "mercado_pago_config",
     "empresa_mercado_pago_configs",
     "payment_transactions",
     "customer_wallet_accounts",

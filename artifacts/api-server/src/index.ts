@@ -196,6 +196,16 @@ async function runStartupMigrations() {
     `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_agencia VARCHAR(30)`,
     `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_conta VARCHAR(50)`,
     `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_tipo_conta VARCHAR(20) DEFAULT 'corrente'`,
+    `CREATE TABLE IF NOT EXISTS mercado_pago_config (
+      id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      public_key TEXT,
+      encrypted_access_token TEXT,
+      enabled BOOLEAN NOT NULL DEFAULT false,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `INSERT INTO mercado_pago_config (id, enabled)
+      VALUES (1, false)
+      ON CONFLICT (id) DO NOTHING`,
     `ALTER TABLE motoristas_app ADD COLUMN IF NOT EXISTS email VARCHAR(255)`,
 
     `ALTER TABLE produtos_pdv ADD COLUMN IF NOT EXISTS tamanhos JSONB`,

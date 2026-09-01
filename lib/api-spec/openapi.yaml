@@ -445,7 +445,7 @@ paths:
           in: path
           required: true
           schema: { type: integer }
-      responses: { "200": { description: Partner Mercado Pago configuration without Access Token } }
+      responses: { "200": { description: Partner payment options using the global Mercado Pago account } }
     put:
       operationId: updateAdminPartnerPaymentConfig
       tags: [payments]
@@ -457,7 +457,19 @@ paths:
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/AdminPartnerPaymentConfigInput" } } }
-      responses: { "200": { description: Saved partner Mercado Pago configuration } }
+      responses: { "200": { description: Saved partner payment options } }
+  /payments/admin/config:
+    get:
+      operationId: getGlobalMercadoPagoConfig
+      tags: [payments]
+      responses: { "200": { description: Global Mercado Pago configuration without Access Token } }
+    put:
+      operationId: updateGlobalMercadoPagoConfig
+      tags: [payments]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/GlobalMercadoPagoConfigInput" } } }
+      responses: { "200": { description: Saved global Mercado Pago configuration } }
   /payments/admin/fees:
     get:
       operationId: getPaymentFees
@@ -533,11 +545,15 @@ components:
     AdminPartnerPaymentConfigInput:
       type: object
       properties:
-        publicKey: { type: string }
-        userId: { type: string }
-        accessToken: { type: string, writeOnly: true }
         mercadoPagoEnabled: { type: boolean }
         directPaymentEnabled: { type: boolean }
+    GlobalMercadoPagoConfigInput:
+      type: object
+      properties:
+        publicKey: { type: string }
+        accessToken: { type: string, writeOnly: true }
+        enabled: { type: boolean }
+      required: [publicKey, enabled]
     PaymentFeesInput:
       type: object
       properties:

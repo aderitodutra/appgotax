@@ -20,11 +20,14 @@ export interface PartnerPaymentOptionsInput {
 }
 
 export interface AdminPartnerPaymentConfigInput {
-  publicKey?: string;
-  userId?: string;
-  accessToken?: string;
   mercadoPagoEnabled?: boolean;
   directPaymentEnabled?: boolean;
+}
+
+export interface GlobalMercadoPagoConfigInput {
+  publicKey: string;
+  accessToken?: string;
+  enabled: boolean;
 }
 
 export interface PaymentFeesInput {

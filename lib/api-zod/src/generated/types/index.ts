@@ -27,6 +27,7 @@ export * from "./empresaPlano";
 export * from "./entrega";
 export * from "./entregaStatus";
 export * from "./errorResponse";
+export * from "./globalMercadoPagoConfigInput";
 export * from "./healthStatus";
 export * from "./itemCardapio";
 export * from "./loginRequest";

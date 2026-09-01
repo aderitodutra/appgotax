@@ -31,6 +31,7 @@ import type {
   Empresa,
   Entrega,
   ErrorResponse,
+  GlobalMercadoPagoConfigInput,
   HealthStatus,
   ItemCardapio,
   LoginRequest,
@@ -2283,6 +2284,156 @@ export const useUpdateAdminPartnerPaymentConfig = <
   return useMutation(
     getUpdateAdminPartnerPaymentConfigMutationOptions(options),
   );
+};
+
+export const getGetGlobalMercadoPagoConfigUrl = () => {
+  return `/api/payments/admin/config`;
+};
+
+export const getGlobalMercadoPagoConfig = async (
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getGetGlobalMercadoPagoConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGlobalMercadoPagoConfigQueryKey = () => {
+  return [`/api/payments/admin/config`] as const;
+};
+
+export const getGetGlobalMercadoPagoConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGlobalMercadoPagoConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGlobalMercadoPagoConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetGlobalMercadoPagoConfigQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGlobalMercadoPagoConfig>>
+  > = ({ signal }) => getGlobalMercadoPagoConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGlobalMercadoPagoConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGlobalMercadoPagoConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGlobalMercadoPagoConfig>>
+>;
+export type GetGlobalMercadoPagoConfigQueryError = ErrorType<unknown>;
+
+export function useGetGlobalMercadoPagoConfig<
+  TData = Awaited<ReturnType<typeof getGlobalMercadoPagoConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGlobalMercadoPagoConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGlobalMercadoPagoConfigQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getUpdateGlobalMercadoPagoConfigUrl = () => {
+  return `/api/payments/admin/config`;
+};
+
+export const updateGlobalMercadoPagoConfig = async (
+  globalMercadoPagoConfigInput: GlobalMercadoPagoConfigInput,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUpdateGlobalMercadoPagoConfigUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(globalMercadoPagoConfigInput),
+  });
+};
+
+export const getUpdateGlobalMercadoPagoConfigMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGlobalMercadoPagoConfig>>,
+    TError,
+    { data: BodyType<GlobalMercadoPagoConfigInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateGlobalMercadoPagoConfig>>,
+  TError,
+  { data: BodyType<GlobalMercadoPagoConfigInput> },
+  TContext
+> => {
+  const mutationKey = ["updateGlobalMercadoPagoConfig"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateGlobalMercadoPagoConfig>>,
+    { data: BodyType<GlobalMercadoPagoConfigInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateGlobalMercadoPagoConfig(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateGlobalMercadoPagoConfigMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateGlobalMercadoPagoConfig>>
+>;
+export type UpdateGlobalMercadoPagoConfigMutationBody =
+  BodyType<GlobalMercadoPagoConfigInput>;
+export type UpdateGlobalMercadoPagoConfigMutationError = ErrorType<unknown>;
+
+export const useUpdateGlobalMercadoPagoConfig = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGlobalMercadoPagoConfig>>,
+    TError,
+    { data: BodyType<GlobalMercadoPagoConfigInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateGlobalMercadoPagoConfig>>,
+  TError,
+  { data: BodyType<GlobalMercadoPagoConfigInput> },
+  TContext
+> => {
+  return useMutation(getUpdateGlobalMercadoPagoConfigMutationOptions(options));
 };
 
 export const getGetPaymentFeesUrl = () => {

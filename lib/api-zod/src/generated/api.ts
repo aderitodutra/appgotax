@@ -424,11 +424,14 @@ export const UpdateAdminPartnerPaymentConfigParams = zod.object({
 });
 
 export const UpdateAdminPartnerPaymentConfigBody = zod.object({
-  publicKey: zod.string().optional(),
-  userId: zod.string().optional(),
-  accessToken: zod.string().optional(),
   mercadoPagoEnabled: zod.boolean().optional(),
   directPaymentEnabled: zod.boolean().optional(),
+});
+
+export const UpdateGlobalMercadoPagoConfigBody = zod.object({
+  publicKey: zod.string(),
+  accessToken: zod.string().optional(),
+  enabled: zod.boolean(),
 });
 
 export const UpdatePaymentFeesBody = zod.object({
