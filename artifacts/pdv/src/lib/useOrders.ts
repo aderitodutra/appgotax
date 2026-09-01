@@ -43,7 +43,7 @@ function showBrowserNotification(order: Order) {
   try {
     const n = new Notification("🛎️ Novo Pedido!", {
       body: `${order.clienteNome} — R$ ${Number(order.total).toFixed(2)}`,
-      icon: "/logo.png",
+      icon: "/pdv/logo.png",
       tag: `pedido-${order.id}`,
       requireInteraction: true,
     });

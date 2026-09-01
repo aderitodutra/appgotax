@@ -177,17 +177,11 @@ export default function TimeLine() {
         const res = await fetch("/api/pdv/maps-key", { headers: authHeaders });
         const { key } = await res.json();
         if (!key || cancelled) return;
-        if ((window as any).google?.maps?.Map) { setMapsReady(true); return; }
-        // Callback chamado quando Maps está totalmente pronto
-        (window as any).__mapsReady = () => { if (!cancelled) setMapsReady(true); };
-        (window as any).gm_authFailure = () => {
-          console.error("[TimeLine] Google Maps auth error — verifique as restrições da chave no Google Cloud Console");
-        };
+        if ((window as any).google?.maps) { setMapsReady(true); return; }
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async&callback=__mapsReady`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
         script.async = true;
-        script.defer = true;
-        script.onerror = () => { console.error("[TimeLine] Falha ao carregar script do Google Maps"); };
+        script.onload = () => { if (!cancelled) setMapsReady(true); };
         document.head.appendChild(script);
       } catch { }
     }

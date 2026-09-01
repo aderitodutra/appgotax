@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Store, MapPin, Truck, CreditCard, Save, CheckCircle2, AlertCircle, Loader2, Globe, Navigation, Zap, Copy, UtensilsCrossed, Wallet } from "lucide-react";
+import { Store, MapPin, Truck, CreditCard, Save, CheckCircle2, AlertCircle, Loader2, Globe, Navigation, Zap, Copy, UtensilsCrossed } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -87,21 +87,6 @@ export default function Configuracoes() {
   const [savingSubcat, setSavingSubcat] = useState(false);
   const [savedSubcat, setSavedSubcat] = useState(false);
 
-  // Mercado Pago Config State
-  const [mpConfig, setMpConfig] = useState({
-    publicKey: "",
-    userId: "",
-    accessToken: "",
-    mercadoPagoEnabled: false,
-    directPaymentEnabled: true,
-    configured: false,
-    beta: false,
-    environment: "sandbox",
-  });
-  const [savingMp, setSavingMp] = useState(false);
-  const [savedMp, setSavedMp] = useState(false);
-  const [mpError, setMpError] = useState("");
-
   useEffect(() => {
     if (isFood) {
       fetch("/api/subcategorias-alimentacao").then(r => r.ok ? r.json() : []).then(d => setSubcategorias(Array.isArray(d) ? d : [])).catch(() => {});
@@ -133,8 +118,7 @@ export default function Configuracoes() {
       fetch("/api/pdv/config-pagamento", { headers }).then(r => r.ok ? r.json() : null),
       fetch("/api/pdv/config-pix", { headers }).then(r => r.ok ? r.json() : null),
       fetch("/api/pdv/perfil", { headers }).then(r => r.ok ? r.json() : null),
-      fetch("/api/payments/partner-config", { headers }).then(r => r.ok ? r.json() : null),
-    ]).then(([entrega, areaData, pag, pix, perfilData, mp]) => {
+    ]).then(([entrega, areaData, pag, pix, perfilData]) => {
       if (entrega) setCfg({
         tipo: entrega.tipo ?? "fixa",
         taxa_fixa: Number(entrega.taxa_fixa ?? 5),
@@ -153,16 +137,6 @@ export default function Configuracoes() {
       if (pag?.metodos) setMetodosPag(pag.metodos);
       if (pix?.chave_pix !== undefined) { setPixChave(pix.chave_pix ?? ""); setPixTipo(pix.tipo_chave_pix ?? "aleatoria"); }
       if (perfilData) setPerfil({ nome: perfilData.nome ?? "", categoria: perfilData.categoria ?? "", descricao: perfilData.descricao ?? "", telefone: perfilData.telefone ?? "", cnpj: perfilData.cnpj ?? "" });
-      if (mp) setMpConfig(prev => ({
-        ...prev,
-        publicKey: mp.publicKey || "",
-        userId: mp.userId || "",
-        mercadoPagoEnabled: !!mp.mercadoPagoEnabled,
-        directPaymentEnabled: mp.directPaymentEnabled ?? true,
-        configured: !!mp.configured,
-        beta: !!mp.beta,
-        environment: mp.environment || "sandbox",
-      }));
     })
     .catch(() => {})
     .finally(() => { setLoading(false); setLoadingPag(false); });
@@ -274,38 +248,6 @@ export default function Configuracoes() {
       setPagError("Falha de conexão. Tente novamente.");
     }
     setSavingPag(false);
-  };
-
-  const handleSaveMp = async () => {
-    setSavingMp(true); setMpError(""); setSavedMp(false);
-    try {
-      const body: any = {
-        publicKey: mpConfig.publicKey,
-        userId: mpConfig.userId,
-        mercadoPagoEnabled: mpConfig.mercadoPagoEnabled,
-        directPaymentEnabled: mpConfig.directPaymentEnabled,
-      };
-      if (mpConfig.accessToken) body.accessToken = mpConfig.accessToken;
-
-      const r = await fetch("/api/payments/partner-config", {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(body),
-      });
-      
-      if (r.ok) {
-        const updated = await r.json();
-        setMpConfig(prev => ({ ...prev, ...updated, accessToken: "" }));
-        setSavedMp(true);
-        setTimeout(() => setSavedMp(false), 3000);
-      } else {
-        const err = await r.json().catch(() => ({}));
-        setMpError(err.message || err.error || "Erro ao salvar credenciais.");
-      }
-    } catch {
-      setMpError("Falha de conexão. Tente novamente.");
-    }
-    setSavingMp(false);
   };
 
   const toggleMetodo = (key: string) => {
@@ -885,117 +827,6 @@ export default function Configuracoes() {
                 : savedPix
                 ? <><CheckCircle2 className="w-4 h-4 mr-2" />Chave PIX salva!</>
                 : <><Zap className="w-4 h-4 mr-2" />Salvar chave PIX</>
-              }
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Mercado Pago */}
-        <div className="md:col-span-1 mt-6">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-[#009EE3]" /> Integração Mercado Pago
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Receba pagamentos automaticamente de clientes no aplicativo usando sua própria conta Mercado Pago.
-          </p>
-        </div>
-        <Card className="md:col-span-2 shadow-sm border-border/50 mt-0 md:mt-6 overflow-hidden">
-          <div className="bg-[#009EE3]/5 border-b border-[#009EE3]/10 px-6 py-4 flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-[#009EE3] flex items-center gap-2">
-                Credenciais da API
-                {mpConfig.beta && (
-                  <span className="bg-[#009EE3] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">BETA</span>
-                )}
-                {mpConfig.environment === "sandbox" && (
-                  <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">SANDBOX</span>
-                )}
-                {mpConfig.configured && (
-                  <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Configurado
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Você precisa ter uma conta no Mercado Pago e gerar suas credenciais no painel de desenvolvedor.
-              </p>
-            </div>
-          </div>
-          <CardContent className="p-6 space-y-5">
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Public Key</label>
-                <Input 
-                  value={mpConfig.publicKey} 
-                  onChange={e => setMpConfig(p => ({ ...p, publicKey: e.target.value }))} 
-                  placeholder="APP_USR-..." 
-                  className="bg-muted/50 font-mono text-sm" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">User ID (Opcional)</label>
-                <Input 
-                  value={mpConfig.userId} 
-                  onChange={e => setMpConfig(p => ({ ...p, userId: e.target.value }))} 
-                  placeholder="Ex: 123456789" 
-                  className="bg-muted/50 font-mono text-sm" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Access Token {mpConfig.configured && <span className="text-xs text-green-600 font-normal">(Salvo e Oculto)</span>}</label>
-                <Input 
-                  type="password" 
-                  value={mpConfig.accessToken} 
-                  onChange={e => setMpConfig(p => ({ ...p, accessToken: e.target.value }))} 
-                  placeholder={mpConfig.configured ? "Deixe em branco para manter o token atual" : "APP_USR-..."} 
-                  className="bg-muted/50 font-mono text-sm" 
-                />
-              </div>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-6 space-y-4">
-              <p className="font-semibold text-sm text-foreground mb-2">Opções de Checkout</p>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Aceitar Pagamentos via Mercado Pago</p>
-                  <p className="text-xs text-muted-foreground">O cliente pagará pelo app e o valor será creditado na sua conta Mercado Pago.</p>
-                </div>
-                <Switch 
-                  checked={mpConfig.mercadoPagoEnabled} 
-                  onCheckedChange={v => setMpConfig(p => ({ ...p, mercadoPagoEnabled: v }))} 
-                  disabled={!mpConfig.configured && !mpConfig.accessToken} 
-                />
-              </div>
-              
-              <div className="border-t border-slate-200 pt-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Aceitar Recebimento Direto</p>
-                  <p className="text-xs text-muted-foreground">O cliente pagará diretamente para você via Pix ou maquineta no ato da entrega (usa suas formas de pagamento configuradas acima).</p>
-                </div>
-                <Switch 
-                  checked={mpConfig.directPaymentEnabled} 
-                  onCheckedChange={v => setMpConfig(p => ({ ...p, directPaymentEnabled: v }))} 
-                />
-              </div>
-            </div>
-
-            {mpError && (
-              <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl text-sm text-destructive">
-                <AlertCircle className="w-4 h-4 shrink-0" />{mpError}
-              </div>
-            )}
-
-            <Button
-              onClick={handleSaveMp}
-              disabled={savingMp}
-              className="w-full bg-[#009EE3] hover:bg-[#009EE3]/90 text-white shadow-md shadow-[#009EE3]/20"
-            >
-              {savingMp
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>
-                : savedMp
-                ? <><CheckCircle2 className="w-4 h-4 mr-2" />Configuração salva!</>
-                : <><Save className="w-4 h-4 mr-2" />Salvar Configuração Mercado Pago</>
               }
             </Button>
           </CardContent>

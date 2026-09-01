@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      // Recebe token via URL quando vindo da página pública do PDV
+      // Recebe token via URL quando vindo de página externa (ex: gotaxi.com.br/pdv)
       const params = new URLSearchParams(window.location.search);
       const authParam = params.get("_auth");
       if (authParam) {

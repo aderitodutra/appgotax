@@ -343,7 +343,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 w-[220px] bg-card border-r border-border/60 flex flex-col z-20 shadow-sm">
       <div className="h-16 flex items-center px-5 border-b border-border/60">
         <div className="flex-1 min-w-0">
-          <img src="/logo.png" alt="Go Taxi" className="h-9 object-contain object-left" />
+          <img src="/pdv/logo.png" alt="Go Taxi" className="h-9 object-contain object-left" />
           <p className="text-[10px] text-primary font-semibold uppercase tracking-wider mt-0.5">PDV Parceiro</p>
         </div>
       </div>

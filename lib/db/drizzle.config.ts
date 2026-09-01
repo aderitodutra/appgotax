@@ -32,11 +32,5 @@ export default defineConfig({
     "itens_cardapio",
     "restaurantes",
     "subcategorias_alimentacao",
-    "payment_fees",
-    "empresa_mercado_pago_configs",
-    "payment_transactions",
-    "customer_wallet_accounts",
-    "customer_wallet_ledger",
-    "mercado_pago_webhook_events",
   ],
 });
