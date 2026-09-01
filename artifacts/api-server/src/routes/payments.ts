@@ -73,7 +73,7 @@ async function globalMercadoPagoConfig() {
   const rows = await db.execute(sql`SELECT public_key, encrypted_access_token, enabled FROM mercado_pago_config WHERE id = 1 LIMIT 1`);
   const config = rows.rows[0] as any;
   return {
-    publicKey: String(config?.public_key ?? process.env.MERCADO_PAGO_PUBLIC_KEY ?? ""),
+    publicKey: String(config?.public_key ?? ""),
     encryptedAccessToken: String(config?.encrypted_access_token ?? ""),
     enabled: !!config?.enabled,
   };
@@ -82,12 +82,6 @@ async function globalAccessToken() {
   const config = await globalMercadoPagoConfig();
   if (config.encryptedAccessToken) return decryptToken(config.encryptedAccessToken);
   return process.env.MERCADO_PAGO_ACCESS_TOKEN || "";
-}
-function globalCredentialsAvailable(config: Awaited<ReturnType<typeof globalMercadoPagoConfig>>) {
-  return !!config.publicKey && (!!config.encryptedAccessToken || !!process.env.MERCADO_PAGO_ACCESS_TOKEN);
-}
-function globalIntegrationConfigured(config: Awaited<ReturnType<typeof globalMercadoPagoConfig>>) {
-  return config.enabled && globalCredentialsAvailable(config);
 }
 async function resolveAmount(module: string, referenceId: string) {
   const maps: Record<string, { table: string; amount: string }> = {
@@ -111,7 +105,7 @@ router.get("/options/:empresaId", async (req, res) => {
   const partner = c.rows[0] as any;
   const global = await globalMercadoPagoConfig();
   const partnerEnabled = partner ? !!partner.enabled : true;
-  res.json({ empresaId, mercadoPago: globalIntegrationConfigured(global) && partnerEnabled, directPayment: partner ? !!partner.direct_payment_enabled : true, wallet: true, ...BETA });
+  res.json({ empresaId, mercadoPago: global.enabled && partnerEnabled && !!global.encryptedAccessToken, directPayment: partner ? !!partner.direct_payment_enabled : true, wallet: true, ...BETA });
 });
 router.get("/partner-config", requirePartner, async (req, res) => {
   const r = await db.execute(sql`SELECT enabled, direct_payment_enabled FROM empresa_mercado_pago_configs WHERE empresa_id = ${(req as any).empresaId} LIMIT 1`);
@@ -120,7 +114,7 @@ router.get("/partner-config", requirePartner, async (req, res) => {
   res.json({
     mercadoPagoEnabled: partner ? !!partner.enabled : true,
     directPaymentEnabled: partner ? !!partner.direct_payment_enabled : true,
-    configured: globalIntegrationConfigured(global),
+    configured: global.enabled && !!global.encryptedAccessToken,
     ...BETA,
   });
 });
@@ -131,7 +125,7 @@ router.put("/partner-options", requirePartner, async (req, res) => {
     return;
   }
   const global = await globalMercadoPagoConfig();
-  const configured = globalIntegrationConfigured(global);
+  const configured = global.enabled && !!global.encryptedAccessToken;
   if (b.mercadoPagoEnabled && !configured) {
     res.status(400).json({ error: "mercado_pago_not_configured", message: "A integração global do Mercado Pago ainda não foi ativada pela GoTaxi" });
     return;
@@ -156,7 +150,7 @@ router.get("/admin/partner-config/:empresaId", requireAdmin, async (req, res) =>
     userId: "",
     mercadoPagoEnabled: x ? !!x.enabled : true,
     directPaymentEnabled: x ? !!x.direct_payment_enabled : true,
-    configured: globalIntegrationConfigured(global),
+    configured: global.enabled && !!global.encryptedAccessToken,
     ...BETA,
   });
 });
@@ -172,11 +166,11 @@ router.put("/admin/partner-config/:empresaId", requireAdmin, async (req, res) =>
     VALUES (${empresaId}, ${!!b.mercadoPagoEnabled}, ${b.directPaymentEnabled !== false})
     ON CONFLICT (empresa_id) DO UPDATE SET enabled = EXCLUDED.enabled, direct_payment_enabled = EXCLUDED.direct_payment_enabled, updated_at = NOW()`);
   const global = await globalMercadoPagoConfig();
-  res.json({ empresaId, mercadoPagoEnabled: !!b.mercadoPagoEnabled, directPaymentEnabled: b.directPaymentEnabled !== false, configured: globalIntegrationConfigured(global), ...BETA });
+  res.json({ empresaId, mercadoPagoEnabled: !!b.mercadoPagoEnabled, directPaymentEnabled: b.directPaymentEnabled !== false, configured: global.enabled && !!global.encryptedAccessToken, ...BETA });
 });
 router.get("/admin/config", requireAdmin, async (_req, res) => {
   const config = await globalMercadoPagoConfig();
-  res.json({ publicKey: config.publicKey, configured: globalCredentialsAvailable(config), enabled: config.enabled, ...BETA });
+  res.json({ publicKey: config.publicKey, configured: !!config.encryptedAccessToken, enabled: config.enabled, ...BETA });
 });
 router.put("/admin/config", requireAdmin, async (req, res) => {
   const b = req.body || {};
@@ -189,17 +183,15 @@ router.put("/admin/config", requireAdmin, async (req, res) => {
     const publicKey = typeof b.publicKey === "string" ? b.publicKey.trim() : previous.publicKey;
     const encrypted = b.accessToken === undefined ? previous.encryptedAccessToken : encryptToken(b.accessToken.trim());
     const enabled = !!b.enabled;
-    const tokenAvailable = !!encrypted || !!process.env.MERCADO_PAGO_ACCESS_TOKEN;
-    if (enabled && (!publicKey || !tokenAvailable)) {
+    if (enabled && (!publicKey || !encrypted)) {
       res.status(400).json({ error: "mercado_pago_credentials_required", message: "Public Key e Access Token são obrigatórios para ativar o Mercado Pago" });
       return;
     }
     await db.execute(sql`INSERT INTO mercado_pago_config (id, public_key, encrypted_access_token, enabled)
       VALUES (1, ${publicKey || null}, ${encrypted || null}, ${enabled})
       ON CONFLICT (id) DO UPDATE SET public_key = EXCLUDED.public_key, encrypted_access_token = EXCLUDED.encrypted_access_token, enabled = EXCLUDED.enabled, updated_at = NOW()`);
-    res.json({ publicKey, configured: !!publicKey && tokenAvailable, enabled, ...BETA });
-  } catch (err) {
-    console.error("[mercado-pago admin config]", err);
+    res.json({ publicKey, configured: !!encrypted, enabled, ...BETA });
+  } catch {
     res.status(503).json({ error: "credential_encryption_unavailable", message: "Não foi possível armazenar as credenciais de pagamento" });
   }
 });
@@ -248,10 +240,10 @@ router.post("/checkout", requireCustomer, async (req, res) => {
   const partnerRows = await db.execute(sql`SELECT enabled FROM empresa_mercado_pago_configs WHERE empresa_id = ${order.empresaId} LIMIT 1`);
   const partner = partnerRows.rows[0] as any;
   const global = await globalMercadoPagoConfig();
-  if (!globalIntegrationConfigured(global) || (partner && !partner.enabled)) { missingCredentials(res); return; }
+  if (!global.enabled || !global.encryptedAccessToken || (partner && !partner.enabled)) { missingCredentials(res); return; }
   try {
     const method = mercadoPagoMethod as Method;
-    const token = await globalAccessToken(), feeCents = Math.round(order.amountCents * (await fees())[method] / 10000);
+    const token = decryptToken(global.encryptedAccessToken), feeCents = Math.round(order.amountCents * (await fees())[method] / 10000);
     const base = hostUrl(req);
     const p = await mp("/checkout/preferences", token, { method: "POST", body: JSON.stringify({ items: [{ title: `Pagamento ${module}`, quantity: 1, unit_price: order.amountCents / 100, currency_id: "BRL" }], external_reference: externalReference, notification_url: `${base}/api/payments/webhook/mercado-pago`, back_urls: { success: `${base}/`, failure: `${base}/`, pending: `${base}/` } }) });
     const saved = await db.execute(sql`INSERT INTO payment_transactions (empresa_id, customer_id, module, reference_id, payment_source, method, status, gross_amount_cents, platform_fee_cents, provider_preference_id, init_point, sandbox_init_point, external_reference, idempotency_key) VALUES (${order.empresaId}, ${(req as any).customerId}, ${module}, ${referenceId}, 'mercado_pago', ${mercadoPagoMethod}, 'pending', ${order.amountCents}, ${feeCents}, ${p.id ?? null}, ${p.init_point ?? null}, ${p.sandbox_init_point ?? null}, ${externalReference}, ${idempotencyKey}) RETURNING id`);
