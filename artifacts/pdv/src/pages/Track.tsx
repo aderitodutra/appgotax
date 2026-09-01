@@ -119,7 +119,7 @@ export default function Track() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-card border-b border-border px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <img src="/pdv/logo.png" alt="GoTaxi" className="h-7 object-contain" />
+        <img src="/logo.png" alt="GoTaxi" className="h-7 object-contain" />
         <div className="flex-1 min-w-0">
           <p className="text-xs text-muted-foreground">Rastreamento de Pedido</p>
           <p className="text-sm font-semibold text-foreground truncate">{data.empresa_nome}</p>
