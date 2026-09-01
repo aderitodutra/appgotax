@@ -111,13 +111,30 @@ router.post("/login", async (req, res) => {
     `)).rows as any[];
 
     if (!afiliadoRows.length) {
-      const codigo = gerarCodigo(user.nome, user.id);
-      afiliadoRows = (await db.execute(sql`
-        INSERT INTO afiliados (usuario_id, codigo)
-        VALUES (${user.id}, ${codigo})
-        ON CONFLICT (usuario_id) DO UPDATE SET usuario_id = afiliados.usuario_id
-        RETURNING *
-      `)).rows;
+      // Retry up to 3x in case `codigo` UNIQUE conflicts (different user, same prefix)
+      for (let attempt = 0; attempt < 3 && !afiliadoRows.length; attempt++) {
+        const base = gerarCodigo(user.nome, user.id);
+        const codigo = attempt === 0 ? base : `${base}${Math.floor(Math.random() * 900) + 100}`;
+        try {
+          const inserted = (await db.execute(sql`
+            INSERT INTO afiliados (usuario_id, codigo)
+            VALUES (${user.id}, ${codigo})
+            ON CONFLICT (usuario_id) DO NOTHING
+            RETURNING *
+          `)).rows;
+          if (inserted.length) {
+            afiliadoRows = inserted as any[];
+          } else {
+            // usuario_id already existed (race condition) — fetch it
+            afiliadoRows = (await db.execute(sql`
+              SELECT * FROM afiliados WHERE usuario_id = ${user.id}
+            `)).rows as any[];
+          }
+        } catch (e: any) {
+          if (e.code === "23505" && attempt < 2) continue; // codigo conflict, retry
+          throw e;
+        }
+      }
     }
 
     const afiliado = afiliadoRows[0];

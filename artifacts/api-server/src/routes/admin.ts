@@ -324,7 +324,6 @@ router.delete("/usuarios/:id", requireAdmin, async (req, res) => {
     await db.execute(`DELETE FROM afiliado_resgates WHERE afiliado_id IN (SELECT id FROM afiliados WHERE usuario_id = ${id})`);
     await db.execute(`DELETE FROM afiliado_comissoes WHERE afiliado_id IN (SELECT id FROM afiliados WHERE usuario_id = ${id})`);
     await db.execute(`DELETE FROM afiliado_indicacoes WHERE afiliado_id IN (SELECT id FROM afiliados WHERE usuario_id = ${id})`);
-    await db.execute(`DELETE FROM afiliado_indicacoes WHERE usuario_indicado_id = ${id}`);
     await db.execute(`DELETE FROM afiliados WHERE usuario_id = ${id}`);
     const out = await db.execute(`DELETE FROM usuarios WHERE id = ${id} RETURNING id`);
     if (!(out as any).rows?.length) return res.status(404).json({ error: "Usuário não encontrado" });
