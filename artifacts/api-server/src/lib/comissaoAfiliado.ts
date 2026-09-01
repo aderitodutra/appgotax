@@ -1,5 +1,6 @@
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { creditWallet } from "./wallet";
 
 export function decodeClienteToken(token: string | undefined | null): number | null {
   if (!token) return null;
@@ -129,14 +130,28 @@ export async function gerarComissaoCliente(opts: GerarComissaoOpts): Promise<voi
     const valorComissao = Math.round(valorNum * pct) / 100;
     if (valorComissao <= 0) return;
 
-    await db.execute(sql`
+    const inserted = await db.execute(sql`
       INSERT INTO afiliado_comissoes
         (afiliado_id, tipo_evento, valor_transacao, percentual, valor_comissao,
          status, referencia_id, descricao)
       VALUES
         (${afi.afiliadoId}, ${tipoEvento}, ${valorNum}, ${pct}, ${valorComissao},
          'pendente', ${referenciaId ?? null}, ${descricao ?? null})
+      RETURNING id
     `);
+    const commissionId = Number((inserted.rows[0] as any)?.id);
+    if (commissionId) {
+      try {
+        await creditWallet({
+          customerId: afi.ownerUsuarioId,
+          amountCents: Math.round(valorComissao * 100),
+          idempotencyKey: `affiliate-commission:${commissionId}:${referenciaId ?? "none"}`,
+          description: "Comissão de afiliado",
+        });
+      } catch (walletError) {
+        console.error("[comissaoAfiliado] wallet credit failed:", walletError instanceof Error ? walletError.message : "unknown");
+      }
+    }
   } catch (err) {
     console.error("[comissaoAfiliado] erro:", err);
   }

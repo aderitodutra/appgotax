@@ -396,3 +396,47 @@ export const GetCardapioResponseItem = zod.object({
   disponivel: zod.boolean(),
 });
 export const GetCardapioResponse = zod.array(GetCardapioResponseItem);
+
+export const GetPaymentOptionsParams = zod.object({
+  empresaId: zod.coerce.number(),
+});
+
+export const GetPaymentOptionsResponse = zod.object({
+  empresaId: zod.number().optional(),
+  mercadoPago: zod.boolean().optional(),
+  directPayment: zod.boolean().optional(),
+  wallet: zod.boolean().optional(),
+  beta: zod.boolean().optional(),
+  sandbox: zod.boolean().optional(),
+});
+
+export const UpdatePartnerPaymentConfigBody = zod.object({
+  publicKey: zod.string().optional(),
+  userId: zod.string().optional(),
+  accessToken: zod.string().optional(),
+  mercadoPagoEnabled: zod.boolean().optional(),
+  directPaymentEnabled: zod.boolean().optional(),
+});
+
+export const UpdatePaymentFeesBody = zod.object({
+  pix: zod.number().describe("Percentage in basis points"),
+  card: zod.number().describe("Percentage in basis points"),
+  wallet: zod.number().describe("Percentage in basis points"),
+});
+
+export const createWalletTopupBodyAmountCentsMin = 100;
+
+export const CreateWalletTopupBody = zod.object({
+  amountCents: zod.number().min(createWalletTopupBodyAmountCentsMin),
+});
+
+export const CreatePaymentCheckoutBody = zod.object({
+  module: zod.string(),
+  referenceId: zod.string(),
+  paymentSource: zod.enum(["mercado_pago", "wallet"]),
+  mercadoPagoMethod: zod.enum(["pix", "card", "wallet"]),
+});
+
+export const GetPaymentTransactionParams = zod.object({
+  id: zod.coerce.number(),
+});

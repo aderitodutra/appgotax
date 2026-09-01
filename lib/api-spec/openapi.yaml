@@ -27,6 +27,8 @@ tags:
     description: Módulo Entrega
   - name: food
     description: Módulo Food
+  - name: payments
+    description: Mercado Pago and wallet beta payments
 
 paths:
   /healthz:
@@ -408,8 +410,125 @@ paths:
                 items:
                   $ref: "#/components/schemas/ItemCardapio"
 
+  /payments/options/{empresaId}:
+    get:
+      operationId: getPaymentOptions
+      tags: [payments]
+      parameters:
+        - name: empresaId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Public receiving options (beta)
+          content: { application/json: { schema: { $ref: "#/components/schemas/PaymentOptions" } } }
+  /payments/partner-config:
+    get:
+      operationId: getPartnerPaymentConfig
+      tags: [payments]
+      responses: { "200": { description: Partner configuration without secrets } }
+    put:
+      operationId: updatePartnerPaymentConfig
+      tags: [payments]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PartnerPaymentConfigInput" } } }
+      responses: { "200": { description: Saved configuration } }
+  /payments/admin/fees:
+    get:
+      operationId: getPaymentFees
+      tags: [payments]
+      responses: { "200": { description: Payment fees } }
+    put:
+      operationId: updatePaymentFees
+      tags: [payments]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PaymentFeesInput" } } }
+      responses: { "200": { description: Saved fees } }
+  /payments/wallet:
+    get:
+      operationId: getWallet
+      tags: [payments]
+      responses: { "200": { description: Wallet balance } }
+  /payments/wallet/ledger:
+    get:
+      operationId: getWalletLedger
+      tags: [payments]
+      responses: { "200": { description: Wallet ledger } }
+  /payments/wallet/topup:
+    post:
+      operationId: createWalletTopup
+      tags: [payments]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/WalletTopupInput" } } }
+      responses: { "201": { description: Checkout preference created } }
+  /payments/checkout:
+    post:
+      operationId: createPaymentCheckout
+      tags: [payments]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutInput" } } }
+      responses: { "201": { description: Payment initiated } }
+  /payments/webhook/mercado-pago:
+    post:
+      operationId: mercadoPagoWebhook
+      tags: [payments]
+      responses: { "200": { description: Webhook received } }
+  /payments/transactions/{id}:
+    get:
+      operationId: getPaymentTransaction
+      tags: [payments]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Transaction status } }
+  /payments/partner-transactions:
+    get:
+      operationId: listPartnerPaymentTransactions
+      tags: [payments]
+      responses: { "200": { description: Partner payment transactions } }
+
 components:
   schemas:
+    PaymentOptions:
+      type: object
+      properties:
+        empresaId: { type: integer }
+        mercadoPago: { type: boolean }
+        directPayment: { type: boolean }
+        wallet: { type: boolean }
+        beta: { type: boolean }
+        sandbox: { type: boolean }
+    PartnerPaymentConfigInput:
+      type: object
+      properties:
+        publicKey: { type: string }
+        userId: { type: string }
+        accessToken: { type: string, writeOnly: true }
+        mercadoPagoEnabled: { type: boolean }
+        directPaymentEnabled: { type: boolean }
+    PaymentFeesInput:
+      type: object
+      properties:
+        pix: { type: integer, description: Percentage in basis points }
+        card: { type: integer, description: Percentage in basis points }
+        wallet: { type: integer, description: Percentage in basis points }
+      required: [pix, card, wallet]
+    WalletTopupInput:
+      type: object
+      properties:
+        amountCents: { type: integer, minimum: 100 }
+      required: [amountCents]
+    CheckoutInput:
+      type: object
+      properties:
+        module: { type: string }
+        referenceId: { type: string }
+        paymentSource: { type: string, enum: [mercado_pago, wallet] }
+        mercadoPagoMethod: { type: string, enum: [pix, card, wallet] }
+      required: [module, referenceId, paymentSource, mercadoPagoMethod]
     HealthStatus:
       type: object
       properties:

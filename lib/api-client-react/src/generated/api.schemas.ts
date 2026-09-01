@@ -5,6 +5,61 @@
  * SaaS Multi-Empresas API
  * OpenAPI spec version: 0.1.0
  */
+export interface PaymentOptions {
+  empresaId?: number;
+  mercadoPago?: boolean;
+  directPayment?: boolean;
+  wallet?: boolean;
+  beta?: boolean;
+  sandbox?: boolean;
+}
+
+export interface PartnerPaymentConfigInput {
+  publicKey?: string;
+  userId?: string;
+  accessToken?: string;
+  mercadoPagoEnabled?: boolean;
+  directPaymentEnabled?: boolean;
+}
+
+export interface PaymentFeesInput {
+  /** Percentage in basis points */
+  pix: number;
+  /** Percentage in basis points */
+  card: number;
+  /** Percentage in basis points */
+  wallet: number;
+}
+
+export interface WalletTopupInput {
+  /** @minimum 100 */
+  amountCents: number;
+}
+
+export type CheckoutInputPaymentSource =
+  (typeof CheckoutInputPaymentSource)[keyof typeof CheckoutInputPaymentSource];
+
+export const CheckoutInputPaymentSource = {
+  mercado_pago: "mercado_pago",
+  wallet: "wallet",
+} as const;
+
+export type CheckoutInputMercadoPagoMethod =
+  (typeof CheckoutInputMercadoPagoMethod)[keyof typeof CheckoutInputMercadoPagoMethod];
+
+export const CheckoutInputMercadoPagoMethod = {
+  pix: "pix",
+  card: "card",
+  wallet: "wallet",
+} as const;
+
+export interface CheckoutInput {
+  module: string;
+  referenceId: string;
+  paymentSource: CheckoutInputPaymentSource;
+  mercadoPagoMethod: CheckoutInputMercadoPagoMethod;
+}
+
 export interface HealthStatus {
   status: string;
 }
