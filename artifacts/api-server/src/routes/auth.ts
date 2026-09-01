@@ -5,17 +5,13 @@ import { eq, sql } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads", "avatares");
-fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+import { uploadImageToGCS } from "../lib/uploadImage";
+
+const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const avatarUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname) || ".jpg";
-      cb(null, `avatar_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("image/")) cb(null, true);
@@ -307,7 +303,7 @@ router.post("/cliente-avatar", avatarUpload.single("avatar"), async (req: any, r
 
     if (!req.file) return res.status(400).json({ error: "bad_request", message: "Nenhuma imagem enviada" });
 
-    const avatarPath = `/uploads/avatares/${req.file.filename}`;
+    const avatarPath = await uploadImageToGCS(req.file.buffer, req.file.originalname, "avatares");
 
     await db.update(usuariosTable).set({ avatar: avatarPath } as any).where(eq(usuariosTable.id, userId));
     return res.json({ avatar: avatarPath });
