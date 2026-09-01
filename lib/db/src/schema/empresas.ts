@@ -31,6 +31,11 @@ export const empresasTable = pgTable("empresas", {
   docSelfieStatus: text("doc_selfie_status").notNull().default("pendente"),
   chavePix: text("chave_pix"),
   tipoChavePix: text("tipo_chave_pix").default("aleatoria"),
+  numeroContaMercadoPago: text("numero_conta_mercado_pago"),
+  bancoNome: text("banco_nome"),
+  bancoAgencia: text("banco_agencia"),
+  bancoConta: text("banco_conta"),
+  bancoTipoConta: text("banco_tipo_conta").default("corrente"),
   destaque: boolean("destaque").notNull().default(false),
 });
 

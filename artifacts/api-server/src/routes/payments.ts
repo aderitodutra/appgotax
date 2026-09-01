@@ -92,24 +92,80 @@ router.get("/options/:empresaId", async (req, res) => {
   res.json({ empresaId, mercadoPago: available, directPayment: config ? !!config.direct_payment_enabled : true, wallet: true, ...BETA });
 });
 router.get("/partner-config", requirePartner, async (req, res) => {
-  const r = await db.execute(sql`SELECT public_key, mercado_pago_user_id, enabled, direct_payment_enabled, encrypted_access_token FROM empresa_mercado_pago_configs WHERE empresa_id = ${(req as any).empresaId} LIMIT 1`);
-  const x = r.rows[0] as any; res.json({ publicKey: x?.public_key ?? null, userId: x?.mercado_pago_user_id ?? null, mercadoPagoEnabled: !!x?.enabled, directPaymentEnabled: !!x?.direct_payment_enabled, configured: !!x?.encrypted_access_token, ...BETA });
+  const r = await db.execute(sql`SELECT enabled, direct_payment_enabled, encrypted_access_token FROM empresa_mercado_pago_configs WHERE empresa_id = ${(req as any).empresaId} LIMIT 1`);
+  const x = r.rows[0] as any;
+  res.json({
+    mercadoPagoEnabled: !!x?.enabled,
+    directPaymentEnabled: x ? !!x.direct_payment_enabled : true,
+    configured: !!x?.encrypted_access_token,
+    ...BETA,
+  });
 });
-router.put("/partner-config", requirePartner, async (req, res) => {
-  const b = req.body || {}; if (b.accessToken !== undefined && (typeof b.accessToken !== "string" || b.accessToken.length < 10)) { res.status(400).json({ error: "invalid_access_token" }); return; }
+router.put("/partner-options", requirePartner, async (req, res) => {
+  const b = req.body || {};
+  if (b.publicKey !== undefined || b.userId !== undefined || b.accessToken !== undefined) {
+    res.status(403).json({ error: "partner_credentials_admin_only", message: "Credenciais do Mercado Pago são administradas pelo Super Admin" });
+    return;
+  }
+  const previous = await db.execute(sql`SELECT encrypted_access_token FROM empresa_mercado_pago_configs WHERE empresa_id = ${(req as any).empresaId} LIMIT 1`);
+  const configured = !!(previous.rows[0] as any)?.encrypted_access_token;
+  if (b.mercadoPagoEnabled && !configured) {
+    res.status(400).json({ error: "mercado_pago_not_configured", message: "Solicite ao Super Admin a configuração do Mercado Pago" });
+    return;
+  }
+  await db.execute(sql`INSERT INTO empresa_mercado_pago_configs (empresa_id, enabled, direct_payment_enabled)
+    VALUES (${(req as any).empresaId}, ${!!b.mercadoPagoEnabled}, ${b.directPaymentEnabled !== false})
+    ON CONFLICT (empresa_id) DO UPDATE SET enabled = EXCLUDED.enabled, direct_payment_enabled = EXCLUDED.direct_payment_enabled, updated_at = NOW()`);
+  res.json({ mercadoPagoEnabled: !!b.mercadoPagoEnabled, directPaymentEnabled: b.directPaymentEnabled !== false, configured, ...BETA });
+});
+router.put("/partner-config", requirePartner, (_req, res) => {
+  res.status(403).json({ error: "partner_credentials_admin_only", message: "Credenciais do Mercado Pago são administradas pelo Super Admin" });
+});
+router.get("/admin/partner-config/:empresaId", requireAdmin, async (req, res) => {
+  const empresaId = Number(req.params.empresaId);
+  if (!Number.isInteger(empresaId) || empresaId <= 0) { res.status(400).json({ error: "invalid_empresa_id" }); return; }
+  const empresa = await db.execute(sql`SELECT id FROM empresas WHERE id = ${empresaId} LIMIT 1`);
+  if (!empresa.rows[0]) { res.status(404).json({ error: "empresa_not_found" }); return; }
+  const r = await db.execute(sql`SELECT public_key, mercado_pago_user_id, enabled, direct_payment_enabled, encrypted_access_token FROM empresa_mercado_pago_configs WHERE empresa_id = ${empresaId} LIMIT 1`);
+  const x = r.rows[0] as any;
+  res.json({
+    empresaId,
+    publicKey: x?.public_key ?? "",
+    userId: x?.mercado_pago_user_id ?? "",
+    mercadoPagoEnabled: !!x?.enabled,
+    directPaymentEnabled: x ? !!x.direct_payment_enabled : true,
+    configured: !!x?.encrypted_access_token,
+    ...BETA,
+  });
+});
+router.put("/admin/partner-config/:empresaId", requireAdmin, async (req, res) => {
+  const empresaId = Number(req.params.empresaId);
+  if (!Number.isInteger(empresaId) || empresaId <= 0) { res.status(400).json({ error: "invalid_empresa_id" }); return; }
+  const b = req.body || {};
+  if (b.accessToken !== undefined && (typeof b.accessToken !== "string" || b.accessToken.trim().length < 10)) {
+    res.status(400).json({ error: "invalid_access_token" });
+    return;
+  }
   try {
-    const previous = await db.execute(sql`SELECT encrypted_access_token FROM empresa_mercado_pago_configs WHERE empresa_id = ${(req as any).empresaId} LIMIT 1`);
-    const encrypted = b.accessToken === undefined ? null : encryptToken(b.accessToken);
-    const hasCredential = !!(encrypted || (previous.rows[0] as any)?.encrypted_access_token);
-    if (b.mercadoPagoEnabled && (!hasCredential || typeof b.publicKey !== "string" || !b.publicKey.trim() || typeof b.userId !== "string" || !b.userId.trim())) {
-      res.status(400).json({ error: "mercado_pago_credentials_required", message: "Public Key, User ID and Access Token are required to enable Mercado Pago" });
+    const empresa = await db.execute(sql`SELECT id FROM empresas WHERE id = ${empresaId} LIMIT 1`);
+    if (!empresa.rows[0]) { res.status(404).json({ error: "empresa_not_found" }); return; }
+    const previous = await db.execute(sql`SELECT public_key, mercado_pago_user_id, encrypted_access_token FROM empresa_mercado_pago_configs WHERE empresa_id = ${empresaId} LIMIT 1`);
+    const old = previous.rows[0] as any;
+    const publicKey = typeof b.publicKey === "string" ? b.publicKey.trim() : String(old?.public_key ?? "");
+    const userId = typeof b.userId === "string" ? b.userId.trim() : String(old?.mercado_pago_user_id ?? "");
+    const encrypted = b.accessToken === undefined ? null : encryptToken(b.accessToken.trim());
+    const configured = !!(encrypted || old?.encrypted_access_token);
+    if (b.mercadoPagoEnabled && (!configured || !publicKey || !userId)) {
+      res.status(400).json({ error: "mercado_pago_credentials_required", message: "Public Key, User ID e Access Token são obrigatórios para ativar o Mercado Pago" });
       return;
     }
     await db.execute(sql`INSERT INTO empresa_mercado_pago_configs (empresa_id, public_key, encrypted_access_token, mercado_pago_user_id, enabled, direct_payment_enabled)
-      VALUES (${(req as any).empresaId}, ${typeof b.publicKey === "string" ? b.publicKey : null}, ${encrypted}, ${typeof b.userId === "string" ? b.userId : null}, ${!!b.mercadoPagoEnabled}, ${!!b.directPaymentEnabled})
-      ON CONFLICT (empresa_id) DO UPDATE SET public_key = COALESCE(EXCLUDED.public_key, empresa_mercado_pago_configs.public_key), encrypted_access_token = COALESCE(EXCLUDED.encrypted_access_token, empresa_mercado_pago_configs.encrypted_access_token), mercado_pago_user_id = COALESCE(EXCLUDED.mercado_pago_user_id, empresa_mercado_pago_configs.mercado_pago_user_id), enabled = EXCLUDED.enabled, direct_payment_enabled = EXCLUDED.direct_payment_enabled, updated_at = NOW()`);
-    res.json({ configured: hasCredential, ...BETA });
-  } catch { res.status(503).json({ error: "credential_encryption_unavailable", message: "Payment credential storage is unavailable" }); }
+      VALUES (${empresaId}, ${publicKey || null}, ${encrypted}, ${userId || null}, ${!!b.mercadoPagoEnabled}, ${b.directPaymentEnabled !== false})
+      ON CONFLICT (empresa_id) DO UPDATE SET public_key = EXCLUDED.public_key, encrypted_access_token = COALESCE(EXCLUDED.encrypted_access_token, empresa_mercado_pago_configs.encrypted_access_token), mercado_pago_user_id = EXCLUDED.mercado_pago_user_id, enabled = EXCLUDED.enabled, direct_payment_enabled = EXCLUDED.direct_payment_enabled, updated_at = NOW()`);
+    res.json({ empresaId, publicKey, userId, mercadoPagoEnabled: !!b.mercadoPagoEnabled, directPaymentEnabled: b.directPaymentEnabled !== false, configured, ...BETA });
+  } catch {
+    res.status(503).json({ error: "credential_encryption_unavailable", message: "Não foi possível armazenar as credenciais de pagamento" });
+  }
 });
 router.get("/admin/fees", requireAdmin, async (_req, res) => res.json({ feesBasisPoints: await fees(), ...BETA }));
 router.put("/admin/fees", requireAdmin, async (req, res) => {

@@ -410,7 +410,20 @@ export const GetPaymentOptionsResponse = zod.object({
   sandbox: zod.boolean().optional(),
 });
 
-export const UpdatePartnerPaymentConfigBody = zod.object({
+export const UpdatePartnerPaymentOptionsBody = zod.object({
+  mercadoPagoEnabled: zod.boolean(),
+  directPaymentEnabled: zod.boolean(),
+});
+
+export const GetAdminPartnerPaymentConfigParams = zod.object({
+  empresaId: zod.coerce.number(),
+});
+
+export const UpdateAdminPartnerPaymentConfigParams = zod.object({
+  empresaId: zod.coerce.number(),
+});
+
+export const UpdateAdminPartnerPaymentConfigBody = zod.object({
   publicKey: zod.string().optional(),
   userId: zod.string().optional(),
   accessToken: zod.string().optional(),

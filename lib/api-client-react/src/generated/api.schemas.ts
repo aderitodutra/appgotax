@@ -14,7 +14,12 @@ export interface PaymentOptions {
   sandbox?: boolean;
 }
 
-export interface PartnerPaymentConfigInput {
+export interface PartnerPaymentOptionsInput {
+  mercadoPagoEnabled: boolean;
+  directPaymentEnabled: boolean;
+}
+
+export interface AdminPartnerPaymentConfigInput {
   publicKey?: string;
   userId?: string;
   accessToken?: string;

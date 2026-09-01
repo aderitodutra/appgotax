@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminPartnerPaymentConfigInput,
   Agendamento,
   CategoriaServico,
   CheckoutInput,
@@ -35,7 +36,7 @@ import type {
   LoginRequest,
   LoginResponse,
   Modulo,
-  PartnerPaymentConfigInput,
+  PartnerPaymentOptionsInput,
   PaymentFeesInput,
   PaymentOptions,
   Pedido,
@@ -2033,40 +2034,40 @@ export function useGetPartnerPaymentConfig<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-export const getUpdatePartnerPaymentConfigUrl = () => {
-  return `/api/payments/partner-config`;
+export const getUpdatePartnerPaymentOptionsUrl = () => {
+  return `/api/payments/partner-options`;
 };
 
-export const updatePartnerPaymentConfig = async (
-  partnerPaymentConfigInput: PartnerPaymentConfigInput,
+export const updatePartnerPaymentOptions = async (
+  partnerPaymentOptionsInput: PartnerPaymentOptionsInput,
   options?: RequestInit,
 ): Promise<void> => {
-  return customFetch<void>(getUpdatePartnerPaymentConfigUrl(), {
+  return customFetch<void>(getUpdatePartnerPaymentOptionsUrl(), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(partnerPaymentConfigInput),
+    body: JSON.stringify(partnerPaymentOptionsInput),
   });
 };
 
-export const getUpdatePartnerPaymentConfigMutationOptions = <
+export const getUpdatePartnerPaymentOptionsMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updatePartnerPaymentConfig>>,
+    Awaited<ReturnType<typeof updatePartnerPaymentOptions>>,
     TError,
-    { data: BodyType<PartnerPaymentConfigInput> },
+    { data: BodyType<PartnerPaymentOptionsInput> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof updatePartnerPaymentConfig>>,
+  Awaited<ReturnType<typeof updatePartnerPaymentOptions>>,
   TError,
-  { data: BodyType<PartnerPaymentConfigInput> },
+  { data: BodyType<PartnerPaymentOptionsInput> },
   TContext
 > => {
-  const mutationKey = ["updatePartnerPaymentConfig"];
+  const mutationKey = ["updatePartnerPaymentOptions"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -2076,42 +2077,212 @@ export const getUpdatePartnerPaymentConfigMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof updatePartnerPaymentConfig>>,
-    { data: BodyType<PartnerPaymentConfigInput> }
+    Awaited<ReturnType<typeof updatePartnerPaymentOptions>>,
+    { data: BodyType<PartnerPaymentOptionsInput> }
   > = (props) => {
     const { data } = props ?? {};
 
-    return updatePartnerPaymentConfig(data, requestOptions);
+    return updatePartnerPaymentOptions(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type UpdatePartnerPaymentConfigMutationResult = NonNullable<
-  Awaited<ReturnType<typeof updatePartnerPaymentConfig>>
+export type UpdatePartnerPaymentOptionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePartnerPaymentOptions>>
 >;
-export type UpdatePartnerPaymentConfigMutationBody =
-  BodyType<PartnerPaymentConfigInput>;
-export type UpdatePartnerPaymentConfigMutationError = ErrorType<unknown>;
+export type UpdatePartnerPaymentOptionsMutationBody =
+  BodyType<PartnerPaymentOptionsInput>;
+export type UpdatePartnerPaymentOptionsMutationError = ErrorType<unknown>;
 
-export const useUpdatePartnerPaymentConfig = <
+export const useUpdatePartnerPaymentOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updatePartnerPaymentConfig>>,
+    Awaited<ReturnType<typeof updatePartnerPaymentOptions>>,
     TError,
-    { data: BodyType<PartnerPaymentConfigInput> },
+    { data: BodyType<PartnerPaymentOptionsInput> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof updatePartnerPaymentConfig>>,
+  Awaited<ReturnType<typeof updatePartnerPaymentOptions>>,
   TError,
-  { data: BodyType<PartnerPaymentConfigInput> },
+  { data: BodyType<PartnerPaymentOptionsInput> },
   TContext
 > => {
-  return useMutation(getUpdatePartnerPaymentConfigMutationOptions(options));
+  return useMutation(getUpdatePartnerPaymentOptionsMutationOptions(options));
+};
+
+export const getGetAdminPartnerPaymentConfigUrl = (empresaId: number) => {
+  return `/api/payments/admin/partner-config/${empresaId}`;
+};
+
+export const getAdminPartnerPaymentConfig = async (
+  empresaId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getGetAdminPartnerPaymentConfigUrl(empresaId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminPartnerPaymentConfigQueryKey = (empresaId: number) => {
+  return [`/api/payments/admin/partner-config/${empresaId}`] as const;
+};
+
+export const getGetAdminPartnerPaymentConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminPartnerPaymentConfig>>,
+  TError = ErrorType<unknown>,
+>(
+  empresaId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminPartnerPaymentConfig>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetAdminPartnerPaymentConfigQueryKey(empresaId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminPartnerPaymentConfig>>
+  > = ({ signal }) =>
+    getAdminPartnerPaymentConfig(empresaId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!empresaId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminPartnerPaymentConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminPartnerPaymentConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminPartnerPaymentConfig>>
+>;
+export type GetAdminPartnerPaymentConfigQueryError = ErrorType<unknown>;
+
+export function useGetAdminPartnerPaymentConfig<
+  TData = Awaited<ReturnType<typeof getAdminPartnerPaymentConfig>>,
+  TError = ErrorType<unknown>,
+>(
+  empresaId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminPartnerPaymentConfig>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminPartnerPaymentConfigQueryOptions(
+    empresaId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getUpdateAdminPartnerPaymentConfigUrl = (empresaId: number) => {
+  return `/api/payments/admin/partner-config/${empresaId}`;
+};
+
+export const updateAdminPartnerPaymentConfig = async (
+  empresaId: number,
+  adminPartnerPaymentConfigInput: AdminPartnerPaymentConfigInput,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUpdateAdminPartnerPaymentConfigUrl(empresaId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminPartnerPaymentConfigInput),
+  });
+};
+
+export const getUpdateAdminPartnerPaymentConfigMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminPartnerPaymentConfig>>,
+    TError,
+    { empresaId: number; data: BodyType<AdminPartnerPaymentConfigInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminPartnerPaymentConfig>>,
+  TError,
+  { empresaId: number; data: BodyType<AdminPartnerPaymentConfigInput> },
+  TContext
+> => {
+  const mutationKey = ["updateAdminPartnerPaymentConfig"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminPartnerPaymentConfig>>,
+    { empresaId: number; data: BodyType<AdminPartnerPaymentConfigInput> }
+  > = (props) => {
+    const { empresaId, data } = props ?? {};
+
+    return updateAdminPartnerPaymentConfig(empresaId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminPartnerPaymentConfigMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminPartnerPaymentConfig>>
+>;
+export type UpdateAdminPartnerPaymentConfigMutationBody =
+  BodyType<AdminPartnerPaymentConfigInput>;
+export type UpdateAdminPartnerPaymentConfigMutationError = ErrorType<unknown>;
+
+export const useUpdateAdminPartnerPaymentConfig = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminPartnerPaymentConfig>>,
+    TError,
+    { empresaId: number; data: BodyType<AdminPartnerPaymentConfigInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminPartnerPaymentConfig>>,
+  TError,
+  { empresaId: number; data: BodyType<AdminPartnerPaymentConfigInput> },
+  TContext
+> => {
+  return useMutation(
+    getUpdateAdminPartnerPaymentConfigMutationOptions(options),
+  );
 };
 
 export const getGetPaymentFeesUrl = () => {

@@ -427,14 +427,37 @@ paths:
     get:
       operationId: getPartnerPaymentConfig
       tags: [payments]
-      responses: { "200": { description: Partner configuration without secrets } }
+      responses: { "200": { description: Partner payment status without credentials } }
+  /payments/partner-options:
     put:
-      operationId: updatePartnerPaymentConfig
+      operationId: updatePartnerPaymentOptions
       tags: [payments]
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/PartnerPaymentConfigInput" } } }
-      responses: { "200": { description: Saved configuration } }
+        content: { application/json: { schema: { $ref: "#/components/schemas/PartnerPaymentOptionsInput" } } }
+      responses: { "200": { description: Saved partner payment options } }
+  /payments/admin/partner-config/{empresaId}:
+    get:
+      operationId: getAdminPartnerPaymentConfig
+      tags: [payments]
+      parameters:
+        - name: empresaId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { "200": { description: Partner Mercado Pago configuration without Access Token } }
+    put:
+      operationId: updateAdminPartnerPaymentConfig
+      tags: [payments]
+      parameters:
+        - name: empresaId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AdminPartnerPaymentConfigInput" } } }
+      responses: { "200": { description: Saved partner Mercado Pago configuration } }
   /payments/admin/fees:
     get:
       operationId: getPaymentFees
@@ -501,7 +524,13 @@ components:
         wallet: { type: boolean }
         beta: { type: boolean }
         sandbox: { type: boolean }
-    PartnerPaymentConfigInput:
+    PartnerPaymentOptionsInput:
+      type: object
+      properties:
+        mercadoPagoEnabled: { type: boolean }
+        directPaymentEnabled: { type: boolean }
+      required: [mercadoPagoEnabled, directPaymentEnabled]
+    AdminPartnerPaymentConfigInput:
       type: object
       properties:
         publicKey: { type: string }

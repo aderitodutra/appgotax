@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./adminPartnerPaymentConfigInput";
 export * from "./agendamento";
 export * from "./agendamentoStatus";
 export * from "./categoriaServico";
@@ -31,7 +32,7 @@ export * from "./itemCardapio";
 export * from "./loginRequest";
 export * from "./loginResponse";
 export * from "./modulo";
-export * from "./partnerPaymentConfigInput";
+export * from "./partnerPaymentOptionsInput";
 export * from "./paymentFeesInput";
 export * from "./paymentOptions";
 export * from "./pedido";

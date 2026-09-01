@@ -66,6 +66,13 @@ export default function Configuracoes() {
 
   const [pixChave, setPixChave] = useState("");
   const [pixTipo, setPixTipo] = useState("aleatoria");
+  const [dadosRecebimento, setDadosRecebimento] = useState({
+    numero_conta_mercado_pago: "",
+    banco_nome: "",
+    banco_agencia: "",
+    banco_conta: "",
+    banco_tipo_conta: "corrente",
+  });
   const [savingPix, setSavingPix] = useState(false);
   const [savedPix, setSavedPix] = useState(false);
   const [pixError, setPixError] = useState("");
@@ -89,9 +96,6 @@ export default function Configuracoes() {
 
   // Mercado Pago Config State
   const [mpConfig, setMpConfig] = useState({
-    publicKey: "",
-    userId: "",
-    accessToken: "",
     mercadoPagoEnabled: false,
     directPaymentEnabled: true,
     configured: false,
@@ -151,12 +155,20 @@ export default function Configuracoes() {
         raio_visibilidade_km: Number(areaData.raio_visibilidade_km ?? 50),
       });
       if (pag?.metodos) setMetodosPag(pag.metodos);
-      if (pix?.chave_pix !== undefined) { setPixChave(pix.chave_pix ?? ""); setPixTipo(pix.tipo_chave_pix ?? "aleatoria"); }
+      if (pix?.chave_pix !== undefined) {
+        setPixChave(pix.chave_pix ?? "");
+        setPixTipo(pix.tipo_chave_pix ?? "aleatoria");
+        setDadosRecebimento({
+          numero_conta_mercado_pago: pix.numero_conta_mercado_pago ?? "",
+          banco_nome: pix.banco_nome ?? "",
+          banco_agencia: pix.banco_agencia ?? "",
+          banco_conta: pix.banco_conta ?? "",
+          banco_tipo_conta: pix.banco_tipo_conta ?? "corrente",
+        });
+      }
       if (perfilData) setPerfil({ nome: perfilData.nome ?? "", categoria: perfilData.categoria ?? "", descricao: perfilData.descricao ?? "", telefone: perfilData.telefone ?? "", cnpj: perfilData.cnpj ?? "" });
       if (mp) setMpConfig(prev => ({
         ...prev,
-        publicKey: mp.publicKey || "",
-        userId: mp.userId || "",
         mercadoPagoEnabled: !!mp.mercadoPagoEnabled,
         directPaymentEnabled: mp.directPaymentEnabled ?? true,
         configured: !!mp.configured,
@@ -190,7 +202,11 @@ export default function Configuracoes() {
       const r = await fetch("/api/pdv/config-pix", {
         method: "PUT",
         headers,
-        body: JSON.stringify({ chave_pix: pixChave, tipo_chave_pix: pixTipo }),
+        body: JSON.stringify({
+          chave_pix: pixChave,
+          tipo_chave_pix: pixTipo,
+          ...dadosRecebimento,
+        }),
       });
       if (r.ok) { setSavedPix(true); setTimeout(() => setSavedPix(false), 3000); }
       else setPixError("Erro ao salvar. Tente novamente.");
@@ -279,23 +295,18 @@ export default function Configuracoes() {
   const handleSaveMp = async () => {
     setSavingMp(true); setMpError(""); setSavedMp(false);
     try {
-      const body: any = {
-        publicKey: mpConfig.publicKey,
-        userId: mpConfig.userId,
-        mercadoPagoEnabled: mpConfig.mercadoPagoEnabled,
-        directPaymentEnabled: mpConfig.directPaymentEnabled,
-      };
-      if (mpConfig.accessToken) body.accessToken = mpConfig.accessToken;
-
-      const r = await fetch("/api/payments/partner-config", {
+      const r = await fetch("/api/payments/partner-options", {
         method: "PUT",
         headers,
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          mercadoPagoEnabled: mpConfig.mercadoPagoEnabled,
+          directPaymentEnabled: mpConfig.directPaymentEnabled,
+        }),
       });
       
       if (r.ok) {
         const updated = await r.json();
-        setMpConfig(prev => ({ ...prev, ...updated, accessToken: "" }));
+        setMpConfig(prev => ({ ...prev, ...updated }));
         setSavedMp(true);
         setTimeout(() => setSavedMp(false), 3000);
       } else {
@@ -869,6 +880,65 @@ export default function Configuracoes() {
               </p>
             </div>
 
+            <div className="border-t border-border pt-5 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Dados para recebimento e repasse</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Informe os dados da sua conta para que a GoTaxi saiba para onde direcionar os recebimentos e repasses.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Número da conta Mercado Pago</label>
+                <Input
+                  value={dadosRecebimento.numero_conta_mercado_pago}
+                  onChange={e => setDadosRecebimento(prev => ({ ...prev, numero_conta_mercado_pago: e.target.value }))}
+                  placeholder="Ex: 123456789"
+                  className="font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Banco</label>
+                  <Input
+                    value={dadosRecebimento.banco_nome}
+                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_nome: e.target.value }))}
+                    placeholder="Nome do banco"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Agência</label>
+                  <Input
+                    value={dadosRecebimento.banco_agencia}
+                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_agencia: e.target.value }))}
+                    placeholder="Ex: 0001"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Conta bancária</label>
+                  <Input
+                    value={dadosRecebimento.banco_conta}
+                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_conta: e.target.value }))}
+                    placeholder="Ex: 12345-6"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tipo de conta</label>
+                  <select
+                    value={dadosRecebimento.banco_tipo_conta}
+                    onChange={e => setDadosRecebimento(prev => ({ ...prev, banco_tipo_conta: e.target.value }))}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="corrente">Conta corrente</option>
+                    <option value="poupanca">Conta poupança</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {pixError && (
               <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl text-sm text-destructive">
                 <AlertCircle className="w-4 h-4 shrink-0" />{pixError}
@@ -903,7 +973,7 @@ export default function Configuracoes() {
           <div className="bg-[#009EE3]/5 border-b border-[#009EE3]/10 px-6 py-4 flex items-center justify-between">
             <div>
               <p className="font-semibold text-[#009EE3] flex items-center gap-2">
-                Credenciais da API
+                Configuração da integração
                 {mpConfig.beta && (
                   <span className="bg-[#009EE3] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">BETA</span>
                 )}
@@ -917,40 +987,20 @@ export default function Configuracoes() {
                 )}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Você precisa ter uma conta no Mercado Pago e gerar suas credenciais no painel de desenvolvedor.
+                As credenciais são administradas com segurança pelo Super Admin.
               </p>
             </div>
           </div>
           <CardContent className="p-6 space-y-5">
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Public Key</label>
-                <Input 
-                  value={mpConfig.publicKey} 
-                  onChange={e => setMpConfig(p => ({ ...p, publicKey: e.target.value }))} 
-                  placeholder="APP_USR-..." 
-                  className="bg-muted/50 font-mono text-sm" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">User ID (Opcional)</label>
-                <Input 
-                  value={mpConfig.userId} 
-                  onChange={e => setMpConfig(p => ({ ...p, userId: e.target.value }))} 
-                  placeholder="Ex: 123456789" 
-                  className="bg-muted/50 font-mono text-sm" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Access Token {mpConfig.configured && <span className="text-xs text-green-600 font-normal">(Salvo e Oculto)</span>}</label>
-                <Input 
-                  type="password" 
-                  value={mpConfig.accessToken} 
-                  onChange={e => setMpConfig(p => ({ ...p, accessToken: e.target.value }))} 
-                  placeholder={mpConfig.configured ? "Deixe em branco para manter o token atual" : "APP_USR-..."} 
-                  className="bg-muted/50 font-mono text-sm" 
-                />
-              </div>
+            <div className={`rounded-xl border p-4 ${mpConfig.configured ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
+              <p className={`text-sm font-semibold ${mpConfig.configured ? "text-green-700" : "text-amber-700"}`}>
+                {mpConfig.configured ? "Mercado Pago configurado pelo Super Admin" : "Mercado Pago aguardando configuração"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mpConfig.configured
+                  ? "Você pode escolher abaixo quais formas de recebimento deseja aceitar."
+                  : "Solicite ao Super Admin o cadastro das credenciais da sua empresa."}
+              </p>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-6 space-y-4">
@@ -964,7 +1014,7 @@ export default function Configuracoes() {
                 <Switch 
                   checked={mpConfig.mercadoPagoEnabled} 
                   onCheckedChange={v => setMpConfig(p => ({ ...p, mercadoPagoEnabled: v }))} 
-                  disabled={!mpConfig.configured && !mpConfig.accessToken} 
+                  disabled={!mpConfig.configured} 
                 />
               </div>
               

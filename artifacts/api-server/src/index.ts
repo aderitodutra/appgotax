@@ -183,15 +183,19 @@ async function runStartupMigrations() {
 
     // Reclassifica usuarios papel='admin' que na verdade são parceiros do PDV.
     // Critério: tem empresa_id e a empresa NÃO é a "GoTaxi Sistema" (id=1).
-    // Exceção: admin@gotaxi.com nunca é rebaixado (super-admin real).
+    // O super-admin real (Admin GoTaxi, id=2) é preservado pois está vinculado à empresa 1.
     // Idempotente: roda em todo boot mas só atualiza quem ainda tiver papel='admin'.
     `UPDATE usuarios SET papel = 'parceiro'
        WHERE papel = 'admin'
-         AND email <> 'admin@gotaxi.com'
          AND empresa_id IS NOT NULL
          AND empresa_id <> 1`,
 
     `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS indicado_por VARCHAR(20)`,
+    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS numero_conta_mercado_pago VARCHAR(100)`,
+    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_nome VARCHAR(120)`,
+    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_agencia VARCHAR(30)`,
+    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_conta VARCHAR(50)`,
+    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_tipo_conta VARCHAR(20) DEFAULT 'corrente'`,
     `ALTER TABLE motoristas_app ADD COLUMN IF NOT EXISTS email VARCHAR(255)`,
 
     `ALTER TABLE produtos_pdv ADD COLUMN IF NOT EXISTS tamanhos JSONB`,
