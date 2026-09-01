@@ -12,7 +12,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "mercadopago", label: "Mercado Pago (Beta)", icon: Wallet },
 ];
 
-const PROD_BASE = "https://gotaxiplus.replit.app";
+const PROD_BASE = "https://admin.gotaxi.com.br";
 
 export default function ConfiguracoesSistema() {
   const { token } = useAuth();
