@@ -343,7 +343,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 w-[220px] bg-card border-r border-border/60 flex flex-col z-20 shadow-sm">
       <div className="h-16 flex items-center px-5 border-b border-border/60">
         <div className="flex-1 min-w-0">
-          <img src="/pdv/logo.png" alt="Go Taxi" className="h-9 object-contain object-left" />
+          <img src="/logo.png" alt="Go Taxi" className="h-9 object-contain object-left" />
           <p className="text-[10px] text-primary font-semibold uppercase tracking-wider mt-0.5">PDV Parceiro</p>
         </div>
       </div>
@@ -352,11 +352,11 @@ export function Sidebar() {
         <div className="px-4 py-3 border-b border-border/40">
           <p className="text-xs font-semibold text-foreground truncate">{empresa.nome}</p>
           <div className="flex flex-wrap gap-1 mt-1.5">
-            {hasFood       && <span className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400"><UtensilsCrossed className="w-2.5 h-2.5" /> Food</span>}
-            {hasEcommerce  && <span className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400"><Store className="w-2.5 h-2.5" /> Loja</span>}
-            {hasViagens    && <span className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-600 dark:text-green-400"><Plane className="w-2.5 h-2.5" /> Viagens</span>}
-            {hasEncomendas && <span className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-600/15 text-orange-600 dark:text-orange-500"><Package className="w-2.5 h-2.5" /> Entregas</span>}
-            {hasMotorista  && <span className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400"><Car className="w-2.5 h-2.5" /> Pro</span>}
+            {hasFood       && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400">🍔 Food</span>}
+            {hasEcommerce  && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400">🛍️ Loja</span>}
+            {hasViagens    && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400">✈️ Viagens</span>}
+            {hasEncomendas && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-600/15 text-orange-500">📦 Entregas</span>}
+            {hasMotorista  && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400">🚗 Pro</span>}
           </div>
         </div>
       )}
@@ -380,8 +380,8 @@ export function Sidebar() {
         {hasViagens && (
           <>
             <div className="h-px bg-border/60 my-3" />
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2 flex items-center gap-1.5">
-              <Plane className="w-3.5 h-3.5" /> Tur Viagens
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+              ✈️ Tur Viagens
             </div>
             {NAV_ITEMS_VIAGENS.map(item => <NavItem key={item.href} {...item} />)}
           </>
@@ -391,8 +391,8 @@ export function Sidebar() {
         {hasEncomendas && (
           <>
             <div className="h-px bg-border/60 my-3" />
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2 flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5" /> Entregas e Encomendas
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+              📦 Entregas e Encomendas
             </div>
             {ENCOMENDAS_NAV.map(item => <NavItem key={item.href} {...item} />)}
           </>
@@ -402,8 +402,8 @@ export function Sidebar() {
         {hasMotorista && (
           <>
             <div className="h-px bg-border/60 my-3" />
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2 flex items-center gap-1.5">
-              <Car className="w-3.5 h-3.5" /> GoTaxi Pro
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+              🚗 GoTaxi Pro
             </div>
             {MOTORISTA_NAV.map(item => <NavItem key={item.href} {...item} />)}
           </>
