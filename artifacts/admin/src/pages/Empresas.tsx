@@ -8,6 +8,15 @@ type Empresa = {
   usuarioPrincipal?: { id: number; nome: string; email: string } | null;
 };
 
+type MercadoPagoConfig = {
+  publicKey: string;
+  userId: string;
+  accessToken: string;
+  mercadoPagoEnabled: boolean;
+  directPaymentEnabled: boolean;
+  configured: boolean;
+};
+
 const MODULO_MAP: Record<string, { label: string; cor: string; emoji: string }> = {
   food:        { label: "Alimentação",    cor: "#F97316", emoji: "🍔" },
   alimentacao: { label: "Alimentação",    cor: "#F97316", emoji: "🍔" },
@@ -107,9 +116,42 @@ function EditarEmpresaModal({
   const [showSenha, setShowSenha] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMp, setLoadingMp] = useState(true);
+  const [mpConfig, setMpConfig] = useState<MercadoPagoConfig>({
+    publicKey: "",
+    userId: "",
+    accessToken: "",
+    mercadoPagoEnabled: false,
+    directPaymentEnabled: true,
+    configured: false,
+  });
 
   const usuarioId = empresa.usuarioPrincipal?.id;
   const emailOriginal = empresa.usuarioPrincipal?.email || "";
+
+  useEffect(() => {
+    let active = true;
+    setLoadingMp(true);
+    fetch(`/api/payments/admin/partner-config/${empresa.id}`, { headers: authHeaders(token) })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar a configuração do Mercado Pago.");
+        return response.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        setMpConfig({
+          publicKey: data.publicKey || "",
+          userId: data.userId || "",
+          accessToken: "",
+          mercadoPagoEnabled: !!data.mercadoPagoEnabled,
+          directPaymentEnabled: data.directPaymentEnabled ?? true,
+          configured: !!data.configured,
+        });
+      })
+      .catch((err: Error) => active && setError(err.message))
+      .finally(() => active && setLoadingMp(false));
+    return () => { active = false; };
+  }, [empresa.id, token]);
 
   const toggleModulo = (id: string) =>
     setModulos((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
@@ -198,6 +240,26 @@ function EditarEmpresaModal({
           setSaving(false);
           return;
         }
+      }
+
+      // 4) Atualiza credenciais e opções do Mercado Pago
+      const mpBody: Record<string, string | boolean> = {
+        publicKey: mpConfig.publicKey.trim(),
+        userId: mpConfig.userId.trim(),
+        mercadoPagoEnabled: mpConfig.mercadoPagoEnabled,
+        directPaymentEnabled: mpConfig.directPaymentEnabled,
+      };
+      if (mpConfig.accessToken.trim()) mpBody.accessToken = mpConfig.accessToken.trim();
+      const r4 = await fetch(`/api/payments/admin/partner-config/${empresa.id}`, {
+        method: "PUT",
+        headers: authHeaders(token),
+        body: JSON.stringify(mpBody),
+      });
+      if (!r4.ok) {
+        const d = await r4.json().catch(() => ({}));
+        setError(d?.message || "Empresa salva, mas não foi possível atualizar o Mercado Pago.");
+        setSaving(false);
+        return;
       }
 
       onSaved({
@@ -332,6 +394,89 @@ function EditarEmpresaModal({
             </p>
           </div>
 
+          <div className="pt-4 mt-2 border-t border-border space-y-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground/90">Mercado Pago</h3>
+                {mpConfig.configured && (
+                  <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold uppercase">
+                    Configurado
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Credenciais exclusivas desta empresa. O Access Token é criptografado e nunca é exibido novamente.
+              </p>
+            </div>
+
+            {loadingMp ? (
+              <div className="text-sm text-muted-foreground">Carregando configuração do Mercado Pago...</div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">Public Key</label>
+                  <input
+                    value={mpConfig.publicKey}
+                    onChange={(e) => setMpConfig((prev) => ({ ...prev, publicKey: e.target.value }))}
+                    placeholder="APP_USR-..."
+                    autoComplete="off"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">User ID do Mercado Pago</label>
+                  <input
+                    value={mpConfig.userId}
+                    onChange={(e) => setMpConfig((prev) => ({ ...prev, userId: e.target.value }))}
+                    placeholder="Ex: 123456789"
+                    autoComplete="off"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">
+                    Access Token
+                    {mpConfig.configured && <span className="text-xs text-green-500 font-normal ml-1">(salvo e oculto)</span>}
+                  </label>
+                  <input
+                    type="password"
+                    value={mpConfig.accessToken}
+                    onChange={(e) => setMpConfig((prev) => ({ ...prev, accessToken: e.target.value }))}
+                    placeholder={mpConfig.configured ? "Deixe em branco para manter o token atual" : "APP_USR-..."}
+                    autoComplete="new-password"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 divide-y divide-border">
+                  <label className="flex items-center justify-between gap-4 p-3 cursor-pointer">
+                    <span>
+                      <span className="block text-sm font-medium text-foreground">Aceitar Mercado Pago</span>
+                      <span className="block text-xs text-muted-foreground">Habilita o checkout online para esta empresa.</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={mpConfig.mercadoPagoEnabled}
+                      onChange={(e) => setMpConfig((prev) => ({ ...prev, mercadoPagoEnabled: e.target.checked }))}
+                      className="h-4 w-4 accent-primary"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-4 p-3 cursor-pointer">
+                    <span>
+                      <span className="block text-sm font-medium text-foreground">Aceitar recebimento direto</span>
+                      <span className="block text-xs text-muted-foreground">Mantém Pix, dinheiro e maquineta independentes do Mercado Pago.</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={mpConfig.directPaymentEnabled}
+                      onChange={(e) => setMpConfig((prev) => ({ ...prev, directPaymentEnabled: e.target.checked }))}
+                      className="h-4 w-4 accent-primary"
+                    />
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+
           <div className="pt-4 mt-2 border-t border-border">
             <h3 className="text-sm font-semibold text-foreground/90 mb-1">Acesso do parceiro</h3>
             <p className="text-xs text-muted-foreground mb-3">
@@ -410,7 +555,7 @@ function EditarEmpresaModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !nome.trim()}
+            disabled={saving || loadingMp || !nome.trim()}
             className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 hover:bg-primary/90 transition-colors"
           >
             {saving ? "Salvando..." : "Salvar alterações"}

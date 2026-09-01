@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth, API, authHeaders } from "@/lib/auth";
+import { useLocation } from "wouter";
 import { FileText, Shield, Users, Save, ExternalLink, CheckCircle, ChevronDown, ChevronUp, Car, Wallet, AlertCircle, Loader2 } from "lucide-react";
 
 type Tab = "politica" | "termos" | "afiliados" | "caronas" | "mercadopago";
@@ -16,9 +17,14 @@ const PROD_BASE = "https://admin.gotaxi.com.br";
 
 export default function ConfiguracoesSistema() {
   const { token } = useAuth();
+  const [location] = useLocation();
   const hdrs = { ...authHeaders(token), "Content-Type": "application/json" };
 
-  const [tab, setTab] = useState<Tab>("politica");
+  const getRequestedTab = (value: string) => {
+    const query = value.includes("?") ? value.slice(value.indexOf("?") + 1) : window.location.search.slice(1);
+    return new URLSearchParams(query).get("tab") === "mercadopago" ? "mercadopago" : "politica";
+  };
+  const [tab, setTab] = useState<Tab>(() => getRequestedTab(window.location.pathname + window.location.search));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -42,6 +48,11 @@ export default function ConfiguracoesSistema() {
   const [savingMp, setSavingMp] = useState(false);
   const [savedMp, setSavedMp] = useState(false);
   const [mpError, setMpError] = useState("");
+
+  useEffect(() => {
+    const requestedTab = getRequestedTab(location);
+    if (requestedTab === "mercadopago") setTab(requestedTab);
+  }, [location]);
 
   useEffect(() => {
     Promise.all([
