@@ -183,29 +183,15 @@ async function runStartupMigrations() {
 
     // Reclassifica usuarios papel='admin' que na verdade são parceiros do PDV.
     // Critério: tem empresa_id e a empresa NÃO é a "GoTaxi Sistema" (id=1).
-    // O super-admin real (Admin GoTaxi, id=2) é preservado pois está vinculado à empresa 1.
+    // Exceção: admin@gotaxi.com nunca é rebaixado (super-admin real).
     // Idempotente: roda em todo boot mas só atualiza quem ainda tiver papel='admin'.
     `UPDATE usuarios SET papel = 'parceiro'
        WHERE papel = 'admin'
+         AND email <> 'admin@gotaxi.com'
          AND empresa_id IS NOT NULL
          AND empresa_id <> 1`,
 
     `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS indicado_por VARCHAR(20)`,
-    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS numero_conta_mercado_pago VARCHAR(100)`,
-    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_nome VARCHAR(120)`,
-    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_agencia VARCHAR(30)`,
-    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_conta VARCHAR(50)`,
-    `ALTER TABLE empresas ADD COLUMN IF NOT EXISTS banco_tipo_conta VARCHAR(20) DEFAULT 'corrente'`,
-    `CREATE TABLE IF NOT EXISTS mercado_pago_config (
-      id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-      public_key TEXT,
-      encrypted_access_token TEXT,
-      enabled BOOLEAN NOT NULL DEFAULT false,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )`,
-    `INSERT INTO mercado_pago_config (id, enabled)
-      VALUES (1, false)
-      ON CONFLICT (id) DO NOTHING`,
     `ALTER TABLE motoristas_app ADD COLUMN IF NOT EXISTS email VARCHAR(255)`,
 
     `ALTER TABLE produtos_pdv ADD COLUMN IF NOT EXISTS tamanhos JSONB`,
@@ -424,13 +410,13 @@ async function runStartupMigrations() {
   console.log("Startup migrations done");
 }
 
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Server listening on port ${port}`);
-});
-
-// Do not block the HTTP listener on database DDL. In production, an ALTER
-// statement can briefly wait on a database lock; the platform must still be
-// able to reach /api/healthz while migrations finish in the background.
-void runStartupMigrations().catch((err) => {
+runStartupMigrations().then(() => {
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
+}).catch((err) => {
   console.error("Startup migration failed:", err);
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port} (migrations skipped)`);
+  });
 });

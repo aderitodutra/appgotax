@@ -6,13 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from "./adminPartnerPaymentConfigInput";
 export * from "./agendamento";
 export * from "./agendamentoStatus";
 export * from "./categoriaServico";
-export * from "./checkoutInput";
-export * from "./checkoutInputMercadoPagoMethod";
-export * from "./checkoutInputPaymentSource";
 export * from "./corrida";
 export * from "./corridaStatus";
 export * from "./createAgendamentoRequest";
@@ -27,15 +23,11 @@ export * from "./empresaPlano";
 export * from "./entrega";
 export * from "./entregaStatus";
 export * from "./errorResponse";
-export * from "./globalMercadoPagoConfigInput";
 export * from "./healthStatus";
 export * from "./itemCardapio";
 export * from "./loginRequest";
 export * from "./loginResponse";
 export * from "./modulo";
-export * from "./partnerPaymentOptionsInput";
-export * from "./paymentFeesInput";
-export * from "./paymentOptions";
 export * from "./pedido";
 export * from "./pedidoItensItem";
 export * from "./pedidoStatus";
@@ -47,4 +39,3 @@ export * from "./restaurante";
 export * from "./rota";
 export * from "./usuario";
 export * from "./usuarioPapel";
-export * from "./walletTopupInput";
